@@ -1,9 +1,115 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <!-- CASTROL FINAL API: JSONP, tanpa iframe/google.script.run -->
+    <script>
+    (function () {
+        'use strict';
+
+        const CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
+        window.CASTROL_API_URL = CASTROL_API_URL;
+
+        let seq = 0;
+        const REQUEST_TIMEOUT = 60000;
+
+        function makeRunner(successHandler, failureHandler, userObject) {
+            return new Proxy({}, {
+                get: function (_target, property) {
+                    if (property === 'withSuccessHandler') {
+                        return function (fn) {
+                            return makeRunner(fn, failureHandler, userObject);
+                        };
+                    }
+                    if (property === 'withFailureHandler') {
+                        return function (fn) {
+                            return makeRunner(successHandler, fn, userObject);
+                        };
+                    }
+                    if (property === 'withUserObject') {
+                        return function (obj) {
+                            return makeRunner(successHandler, failureHandler, obj);
+                        };
+                    }
+
+                    return function () {
+                        const method = String(property);
+                        const args = Array.prototype.slice.call(arguments);
+                        const callbackName = '__castrol_jsonp_' + Date.now() + '_' + (++seq);
+                        const script = document.createElement('script');
+                        let finished = false;
+
+                        function cleanup() {
+                            if (script && script.parentNode) script.parentNode.removeChild(script);
+                            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+                        }
+
+                        function succeed(payload) {
+                            if (finished) return;
+                            finished = true;
+                            clearTimeout(timer);
+                            cleanup();
+                            if (payload && payload.ok === false) {
+                                fail(new Error(payload.error || 'Terjadi kesalahan pada server Apps Script.'));
+                                return;
+                            }
+                            if (typeof successHandler === 'function') {
+                                successHandler(payload ? payload.result : undefined, userObject);
+                            }
+                        }
+
+                        function fail(error) {
+                            if (finished) return;
+                            finished = true;
+                            clearTimeout(timer);
+                            cleanup();
+                            const err = error instanceof Error ? error : new Error(String(error || 'Request API gagal.'));
+                            if (typeof failureHandler === 'function') failureHandler(err, userObject);
+                            else console.error('[Castrol] API error:', err);
+                        }
+
+                        window[callbackName] = succeed;
+                        script.async = true;
+                        script.onerror = function () {
+                            fail(new Error('Tidak dapat mengakses Apps Script. Pastikan Web App di-deploy dengan Execute as: Me dan Who has access: Anyone.'));
+                        };
+
+                        let encodedArgs = '';
+                        try {
+                            encodedArgs = encodeURIComponent(JSON.stringify(args));
+                        } catch (e) {
+                            fail(e);
+                            return makeRunner(successHandler, failureHandler, userObject);
+                        }
+
+                        const sep = CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?';
+                        script.src = CASTROL_API_URL + sep
+                            + 'api=1'
+                            + '&method=' + encodeURIComponent(method)
+                            + '&args=' + encodedArgs
+                            + '&callback=' + encodeURIComponent(callbackName)
+                            + '&_=' + Date.now();
+
+                        const timer = setTimeout(function () {
+                            fail(new Error('Request ke Apps Script timeout: ' + method));
+                        }, REQUEST_TIMEOUT);
+
+                        (document.head || document.documentElement).appendChild(script);
+                        return makeRunner(successHandler, failureHandler, userObject);
+                    };
+                }
+            });
+        }
+
+        window.google = window.google || {};
+        window.google.script = window.google.script || {};
+        window.google.script.run = makeRunner(null, null, null);
+    })();
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Castrol</title>
+    <meta name="castrol-api" content="jsonp-v1">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1178,150 +1284,6 @@ html,body{height:100%;}
 }
 </style>
 
-<!-- CASTROL GITHUB API BRIDGE START -->
-<script>
-(function () {
-    'use strict';
-
-    const CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
-    window.CASTROL_API_URL = CASTROL_API_URL;
-
-    let iframe = null;
-    let bridgeReady = false;
-    let bridgeFailed = false;
-    let seq = 0;
-    const pending = new Map();
-    const queue = [];
-    const REQUEST_TIMEOUT = 120000;
-    const BRIDGE_READY_TIMEOUT = 30000;
-
-    function createBridgeIframe() {
-        if (iframe) return;
-        iframe = document.createElement('iframe');
-        iframe.id = 'castrolApiBridge';
-        iframe.src = CASTROL_API_URL + (CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?') + 'bridge=1';
-        iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
-        (document.body || document.documentElement).appendChild(iframe);
-    }
-
-    function rejectRequest(req, message) {
-        if (!req) return;
-        clearTimeout(req.timer);
-        pending.delete(req.requestId);
-        try { req.reject(new Error(message)); } catch (e) {}
-    }
-
-    function sendRequest(req) {
-        if (!iframe || !iframe.contentWindow || !bridgeReady) {
-            queue.push(req);
-            return;
-        }
-        try {
-            iframe.contentWindow.postMessage({
-                source: 'castrol-github',
-                requestId: req.requestId,
-                method: req.method,
-                args: req.args
-            }, '*');
-        } catch (err) {
-            rejectRequest(req, err && err.message ? err.message : String(err));
-        }
-    }
-
-    function flushQueue() {
-        if (!bridgeReady) return;
-        while (queue.length) sendRequest(queue.shift());
-    }
-
-    function callServer(method, args) {
-        return new Promise(function (resolve, reject) {
-            const requestId = 'castrol_' + Date.now() + '_' + (++seq);
-            const req = {
-                requestId: requestId,
-                method: method,
-                args: Array.isArray(args) ? args : [],
-                resolve: resolve,
-                reject: reject,
-                timer: null
-            };
-            req.timer = setTimeout(function () {
-                const wasQueued = queue.some(function (x) { return x.requestId === requestId; });
-                if (wasQueued) {
-                    for (let i = queue.length - 1; i >= 0; i--) {
-                        if (queue[i].requestId === requestId) queue.splice(i, 1);
-                    }
-                }
-                pending.delete(requestId);
-                reject(new Error(bridgeFailed
-                    ? 'Bridge Apps Script tidak aktif. Pastikan ApiBridge.html sudah ditambahkan dan Web App Apps Script sudah di-deploy ulang.'
-                    : 'Request ke server timeout: ' + method));
-            }, REQUEST_TIMEOUT);
-            pending.set(requestId, req);
-            if (bridgeReady) sendRequest(req);
-            else queue.push(req);
-        });
-    }
-
-    window.addEventListener('message', function (event) {
-        const data = event.data || {};
-        if (!iframe || event.source !== iframe.contentWindow) return;
-        if (data.source !== 'castrol-apps-script') return;
-
-        if (data.type === 'ready') {
-            bridgeReady = true;
-            bridgeFailed = false;
-            flushQueue();
-            return;
-        }
-
-        if (!data.requestId) return;
-        const req = pending.get(data.requestId);
-        if (!req) return;
-        pending.delete(data.requestId);
-        clearTimeout(req.timer);
-        if (data.ok) req.resolve(data.result);
-        else req.reject(new Error(data.error || 'Terjadi kesalahan pada server Apps Script.'));
-    });
-
-    function startBridge() {
-        createBridgeIframe();
-        setTimeout(function () {
-            if (!bridgeReady) bridgeFailed = true;
-        }, BRIDGE_READY_TIMEOUT);
-    }
-
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startBridge);
-    else startBridge();
-
-    // Compatibility layer: seluruh kode lama google.script.run tetap bisa dipakai.
-    function makeRunner(successHandler, failureHandler, userObject) {
-        return new Proxy({}, {
-            get: function (_target, property) {
-                if (property === 'withSuccessHandler') return function (fn) { return makeRunner(fn, failureHandler, userObject); };
-                if (property === 'withFailureHandler') return function (fn) { return makeRunner(successHandler, fn, userObject); };
-                if (property === 'withUserObject') return function (obj) { return makeRunner(successHandler, failureHandler, obj); };
-                return function () {
-                    const args = Array.prototype.slice.call(arguments);
-                    callServer(String(property), args).then(function (result) {
-                        if (typeof successHandler === 'function') successHandler(result, userObject);
-                    }).catch(function (err) {
-                        if (typeof failureHandler === 'function') failureHandler(err, userObject);
-                        else console.error('[Castrol] Server error:', err);
-                    });
-                    return makeRunner(successHandler, failureHandler, userObject);
-                };
-            }
-        });
-    }
-
-    window.google = window.google || {};
-    window.google.script = window.google.script || {};
-    window.google.script.run = makeRunner(null, null, null);
-})();
-</script>
-<!-- CASTROL GITHUB API BRIDGE END -->
-
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -1991,7 +1953,9 @@ html,body{height:100%;}
             const tanggalInput = document.getElementById('inputTanggal');
             if (tanggalInput) tanggalInput.valueAsDate = new Date();
             const restored = restoreAuthState();
-            showLoading(!restored);
+            // Saat pertama membuka GitHub Pages, jangan tampilkan loading terus-menerus.
+            // Loading hanya ditampilkan ketika benar-benar ada request API.
+            showLoading(false);
             // Produk/Cashback tidak lagi dimuat saat halaman pertama dibuka.
             // Keduanya dimuat hanya setelah login Sales atau saat tab Input dibuka.
             if (restored && String(currentUsernameInput || '').toLowerCase() !== 'admin') {
@@ -2090,10 +2054,6 @@ html,body{height:100%;}
                 } else {
                     showModal("Login Gagal", res.message);
                 }
-            }).withFailureHandler(function(err) {
-                showLoading(false);
-                showModal("Login Error", "Tidak dapat terhubung ke server Apps Script.\n\n" + (err && err.message ? err.message : String(err)));
-                console.error("[Castrol] prosesLogin failed:", err);
             }).prosesLogin(currentUsernameInput);
         }
 
