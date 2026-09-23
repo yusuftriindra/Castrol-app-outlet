@@ -1285,50 +1285,63 @@ html,body{height:100%;}
 </style>
 
 
+<style id="riwayat-card-view">
+.riwayat-card-list{display:grid;grid-template-columns:1fr;gap:12px;width:100%}
+.riwayat-card{width:100%;box-sizing:border-box;background:#fff;border:1px solid #dfe8e2;border-radius:18px;overflow:hidden;box-shadow:0 5px 16px rgba(15,42,27,.055);transition:.18s ease;cursor:pointer}
+.riwayat-card:hover{transform:translateY(-1px);border-color:#b9d9c3;box-shadow:0 9px 24px rgba(15,42,27,.09)}
+.riwayat-card-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:linear-gradient(135deg,#f7fbf8,#edf7f0);border-bottom:1px solid #e2ebe5}
+.riwayat-card-date-wrap{display:flex;align-items:center;gap:9px;min-width:0}
+.riwayat-card-number{display:inline-flex;align-items:center;justify-content:center;min-width:31px;height:27px;padding:0 7px;border-radius:9px;background:#dff3e5;color:#087a3d;font-size:9px;font-weight:900}
+.riwayat-card-label{margin-bottom:3px;color:#94a3b8;font-size:7px;line-height:1;font-weight:900;letter-spacing:.11em}
+.riwayat-card-date{color:#334155;font-size:10px;font-weight:800;white-space:nowrap}
+.riwayat-card-check{width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.riwayat-card-check input{width:17px;height:17px;accent-color:#059669;cursor:pointer}
+.riwayat-card-content{padding:13px 14px}.riwayat-card-main{margin-bottom:12px}
+.riwayat-card-outlet{color:#17251d;font-size:13px;line-height:1.3;font-weight:900;word-break:break-word}
+.riwayat-card-cust{margin-top:4px;color:#94a3b8;font-size:8px;font-weight:700}
+.riwayat-card-product-box{padding:10px 11px;border:1px solid #e5eee8;border-radius:12px;background:#f8fbf9;margin-bottom:11px}
+.riwayat-card-products{color:#475569;font-size:10px;line-height:1.7;font-weight:650}
+.riwayat-product-separator{display:inline-block;margin:0 6px;color:#94a3b8}
+.riwayat-card-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.riwayat-card-info{min-width:0;padding:9px 10px;border:1px solid #e7eee9;border-radius:11px;background:#fff}
+.riwayat-card-info>span{display:block;margin-bottom:4px;color:#94a3b8;font-size:7px;font-weight:900;letter-spacing:.08em}
+.riwayat-card-info>strong{display:block;min-width:0;color:#334155;font-size:9px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.riwayat-card-status{display:inline-flex;align-items:center;justify-content:center;min-height:23px;padding:3px 8px;border-radius:999px;font-size:8px!important;font-weight:900!important;border:1px solid transparent;white-space:nowrap}
+.riwayat-card-status.approve{color:#047857!important;background:#ecfdf5;border-color:#bbf7d0}
+.riwayat-card-status.decline{color:#dc2626!important;background:#fef2f2;border-color:#fecaca}
+.riwayat-card-status.pending{color:#b45309!important;background:#fffbeb;border-color:#fde68a}
+.riwayat-card-status-select{width:100%;min-height:26px;padding:3px 5px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-size:8px;font-weight:800}
+.riwayat-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-top:1px solid #edf2ef;background:#fff}
+.riwayat-card-id{min-width:0;color:#94a3b8;font-size:8px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.riwayat-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-shrink:0}
+.riwayat-card-btn{min-height:29px;padding:5px 8px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-size:8px;font-weight:900;cursor:pointer;transition:.16s ease;white-space:nowrap}
+.riwayat-card-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(15,23,42,.08)}
+.riwayat-card-btn.detail{color:#475569;border-color:#dbe2e8}.riwayat-card-btn.edit{color:#2563eb;border-color:#bfdbfe;background:#eff6ff}.riwayat-card-btn.whatsapp{color:#047857;border-color:#bbf7d0;background:#ecfdf5}.riwayat-card-btn.delete{color:#dc2626;border-color:#fecaca;background:#fef2f2}
+.riwayat-card-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:9px 10px;border:1px solid #e0e9e3;border-radius:13px;background:#fff}
+.riwayat-card-toolbar-left{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.riwayat-select-all{display:flex;align-items:center;gap:6px;color:#475569;font-size:9px;font-weight:800;cursor:pointer}.riwayat-select-all input{width:15px;height:15px;accent-color:#059669}
+.riwayat-selected-badge{padding:4px 8px;border-radius:999px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;font-size:8px;font-weight:800}
+.riwayat-delete-selected{min-height:29px;padding:6px 10px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:8px;font-weight:900;cursor:pointer}.riwayat-delete-selected:disabled{opacity:.45;cursor:not-allowed}
+.riwayat-admin-status-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
+.riwayat-admin-status-toolbar>span{color:#64748b;font-size:8px;font-weight:700}.riwayat-admin-btn{min-height:27px;padding:5px 10px;border-radius:7px;font-size:8px;font-weight:900;cursor:pointer}.riwayat-admin-btn.reset{color:#475569;background:#fff;border:1px solid #cbd5e1}.riwayat-admin-btn.done{color:#fff;background:#0f172a;border:1px solid #0f172a}
+.riwayat-card-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding:9px 3px;color:#64748b;font-size:9px}.riwayat-pagination-buttons{display:flex;align-items:center;gap:5px}.riwayat-pagination-buttons button{min-width:29px;min-height:28px;border:1px solid #dbe3df;border-radius:7px;background:#fff;color:#475569;font-weight:900;cursor:pointer}.riwayat-pagination-buttons button:disabled{opacity:.4;cursor:not-allowed}
+@media (min-width:768px){.riwayat-card-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){
+ .riwayat-card-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.riwayat-card-info:last-child{grid-column:1/-1}
+ .riwayat-card-footer{align-items:stretch;flex-direction:column}.riwayat-card-actions{width:100%}.riwayat-card-btn{flex:1;min-width:0}
+ .riwayat-card-toolbar{align-items:stretch}.riwayat-card-toolbar-left{width:100%}.riwayat-delete-selected{width:100%}.riwayat-card-pagination{align-items:flex-start;flex-direction:column}
+}
+@media (max-width:380px){.riwayat-card-content{padding:11px}.riwayat-card-header{padding:10px 11px}.riwayat-card-info{padding:8px}.riwayat-card-btn{padding:5px 4px;font-size:7px}}
+</style>
+
+
 <style id="mobile-bottom-scroll-fix">
-/* =========================================================
-   CASTROL - FIX SCROLL HP
-   Konten paling bawah tidak lagi tertutup/terpotong.
-   Tidak mengubah fungsi JavaScript / Apps Script.
-   ========================================================= */
-@media (max-width: 767px) {
-    html,
-    body {
-        height: 100%;
-        min-height: 100%;
-        overflow: hidden !important;
-    }
-
-    #app.app-shell {
-        height: 100dvh !important;
-        min-height: 0 !important;
-        max-height: 100dvh !important;
-        overflow: hidden !important;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-
-    #app > .p-4.flex-1.overflow-y-auto {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        height: auto !important;
-        max-height: none !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: auto;
-        padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
-        scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom));
-    }
-
-    #mainPage {
-        padding-bottom: 20px !important;
-    }
-
-    #loginPage,
-    #registerPage {
-        padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important;
-    }
+@media (max-width:767px){
+ html,body{height:100%;min-height:100%;overflow:hidden!important}
+ #app.app-shell{height:100dvh!important;min-height:0!important;max-height:100dvh!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+ #app>.p-4.flex-1.overflow-y-auto{flex:1 1 auto!important;min-height:0!important;height:auto!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto;padding-bottom:calc(80px + env(safe-area-inset-bottom))!important;scroll-padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+ #mainPage{padding-bottom:20px!important}
+ #loginPage,#registerPage{padding-bottom:calc(40px + env(safe-area-inset-bottom))!important}
 }
 </style>
 
@@ -2350,7 +2363,7 @@ html,body{height:100%;}
             const countBadge = document.getElementById('riwayatCount');
 
             if (!Array.isArray(data)) data = [];
-            countBadge.textContent = `${data.length} transaksi`;
+            if (countBadge) countBadge.textContent = `${data.length} transaksi`;
 
             if (data.length === 0) {
                 container.innerHTML = `
@@ -2362,126 +2375,152 @@ html,body{height:100%;}
 
             const isAdmin = currentUsernameInput &&
                 currentUsernameInput.toLowerCase() === 'admin';
-            const totalPages = isAdmin ? Math.max(1, Math.ceil(data.length / RIWAYAT_PAGE_SIZE)) : 1;
+
+            const totalPages = isAdmin
+                ? Math.max(1, Math.ceil(data.length / RIWAYAT_PAGE_SIZE))
+                : 1;
+
             if (riwayatPage > totalPages) riwayatPage = totalPages;
-            const startIndex = isAdmin ? (riwayatPage - 1) * RIWAYAT_PAGE_SIZE : 0;
-            const visibleData = isAdmin ? data.slice(startIndex, startIndex + RIWAYAT_PAGE_SIZE) : data;
 
-            let rows = "";
+            const startIndex = isAdmin
+                ? (riwayatPage - 1) * RIWAYAT_PAGE_SIZE
+                : 0;
 
-            visibleData.forEach((item, index) => {
+            const visibleData = isAdmin
+                ? data.slice(startIndex, startIndex + RIWAYAT_PAGE_SIZE)
+                : data;
+
+            const cards = visibleData.map(function(item, index) {
+                const id = String(item.id || '').trim();
                 const status = String(item.status || 'PENDING').toUpperCase();
 
                 const statusClass = status === 'APPROVE'
-                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    ? 'riwayat-card-status approve'
                     : status === 'DECLINE'
-                        ? 'text-red-700 bg-red-50 border-red-200'
-                        : 'text-amber-700 bg-amber-50 border-amber-200';
+                        ? 'riwayat-card-status decline'
+                        : 'riwayat-card-status pending';
 
                 const products = Array.isArray(item.products)
-                    ? item.products.filter(p => String(p || '').trim() !== '')
+                    ? item.products.filter(function(p){ return String(p || '').trim() !== ''; })
                     : [];
 
                 const productText = products.length
-                    ? products.map(p => escapeHtml(p)).join('<br>')
+                    ? products.map(function(p){ return escapeHtml(p); }).join('<span class="riwayat-product-separator">•</span>')
                     : '-';
 
-                const statusCell = isAdmin ? `
-                    <select
-                        onclick="event.stopPropagation()" class="bulk-status-select w-full min-w-[120px] border border-slate-300 rounded-md px-2 py-1.5 text-[9px] font-bold bg-white"
-                        data-order-id="${escapeHtml(item.id)}"
+                const statusControl = isAdmin ? `
+                    <select onclick="event.stopPropagation()" onchange="updateBulkStatusInfo()"
+                        class="bulk-status-select riwayat-card-status-select"
+                        data-order-id="${escapeHtml(id)}"
                         data-current-status="${escapeHtml(status)}">
                         <option value="">${escapeHtml(status)} / TIDAK DIUBAH</option>
                         <option value="APPROVE">APPROVE</option>
                         <option value="DECLINE">DECLINE</option>
                     </select>
-                ` : `
-                    <span class="inline-flex justify-center items-center px-2 py-1 rounded-full border text-[9px] font-extrabold ${statusClass}">
-                        ${escapeHtml(status)}
-                    </span>`;
+                ` : `<span class="${statusClass}">${escapeHtml(status)}</span>`;
 
-                rows += `
-                    <tr class="riwayat-row hover:bg-emerald-50/40 transition align-top cursor-pointer" onclick="lihatDetail('${escapeHtml(item.id)}')">
-                        <td class="p-2.5 text-center">
-                            <input type="checkbox" class="riwayat-select-checkbox w-3.5 h-3.5 accent-emerald-600 cursor-pointer"
-                                data-order-id="${escapeHtml(item.id)}"
-                                ${selectedRiwayatIds[String(item.id)] ? 'checked' : ''}
-                                onclick="event.stopPropagation()" onchange="toggleRiwayatSelection(this)">
-                        </td>
-                        <td class="p-2.5 text-center text-slate-400 font-semibold">${startIndex + index + 1}</td>
-                        <td class="p-2.5 whitespace-nowrap text-slate-600">${escapeHtml(item.tanggal || '-')}</td>
-                        <td class="p-2.5">
-                            <div class="font-bold text-slate-800 min-w-[130px]">${escapeHtml(item.outlet || '-')}</div>
-                            ${isAdmin ? `<div class="text-[9px] text-slate-400 mt-1">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
-                        </td>
-                        <td class="p-2.5">
-                            <div class="text-[10px] leading-5 text-slate-600 min-w-[180px]">${productText}</div>
-                        </td>
-                        <td class="p-2.5 text-right whitespace-nowrap font-semibold text-slate-700">${escapeHtml(item.volume || '0')} L</td>
-                        <td class="p-2.5 text-right whitespace-nowrap font-semibold text-slate-700">Rp ${Number(item.value || 0).toLocaleString('id-ID')}</td>
-                        <td class="p-2.5">${statusCell}</td>
-                        <td class="p-2.5">
-                            <div class="flex items-center gap-1.5 min-w-[100px]">
-                                <button type="button"
-                                    onclick="event.stopPropagation(); editRiwayat('${escapeHtml(item.id)}'); return false;"
-                                    style="display:inline-flex !important;align-items:center;justify-content:center;min-width:48px !important;visibility:visible !important;opacity:1 !important;"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2.5 rounded-md font-bold text-[9px] border border-blue-700 transition"
-                                    title="Edit order">✏️ EDIT</button>
-                                <button type="button"
-                                    onclick="event.stopPropagation(); kirimUlangWA('${escapeHtml(item.id)}')"
-                                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2.5 rounded-md font-semibold text-[9px] transition"
-                                    title="Kirim ulang WhatsApp">💬 WA</button>
-                                <button type="button"
-                                    onclick="event.stopPropagation(); hapusRiwayat('${escapeHtml(item.id)}')"
-                                    class="bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-2.5 rounded-md font-medium border border-red-200/60 transition"
-                                    title="Hapus">🗑️</button>
+                return `
+                    <article class="riwayat-card" data-order-id="${escapeHtml(id)}"
+                        onclick="lihatDetail('${escapeHtml(id)}')">
+
+                        <div class="riwayat-card-header">
+                            <div class="riwayat-card-date-wrap">
+                                <span class="riwayat-card-number">#${startIndex + index + 1}</span>
+                                <div>
+                                    <div class="riwayat-card-label">TANGGAL</div>
+                                    <div class="riwayat-card-date">${escapeHtml(item.tanggal || '-')}</div>
+                                </div>
                             </div>
-                        </td>
-                    </tr>`;
-            });
+                            <label class="riwayat-card-check" title="Pilih transaksi"
+                                onclick="event.stopPropagation()">
+                                <input type="checkbox" class="riwayat-select-checkbox"
+                                    data-order-id="${escapeHtml(id)}"
+                                    ${selectedRiwayatIds[id] ? 'checked' : ''}
+                                    onclick="event.stopPropagation()"
+                                    onchange="toggleRiwayatSelection(this)">
+                            </label>
+                        </div>
 
-            const bulkControls = isAdmin ? `
-                <div class="flex flex-wrap items-center gap-2 p-3 bg-slate-50 border-b border-slate-200">
-                    <button type="button" onclick="resetPilihanStatusRiwayat()"
-                        class="px-3 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
-                        RESET
-                    </button>
-                    <button type="button" onclick="doneBulkStatusRiwayat()"
-                        class="px-4 py-1.5 rounded-md bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-extrabold shadow-sm">
-                        DONE
-                    </button>
-                    <span id="bulkStatusInfo" class="text-[10px] text-slate-500 font-semibold ml-auto">
-                        Pilih status pada masing-masing baris lalu klik DONE.
-                    </span>
+                        <div class="riwayat-card-content">
+                            <div class="riwayat-card-main">
+                                <div class="riwayat-card-label">OUTLET</div>
+                                <div class="riwayat-card-outlet">${escapeHtml(item.outlet || '-')}</div>
+                                ${isAdmin ? `<div class="riwayat-card-cust">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
+                            </div>
+
+                            <div class="riwayat-card-product-box">
+                                <div class="riwayat-card-label">PRODUK</div>
+                                <div class="riwayat-card-products">${productText}</div>
+                            </div>
+
+                            <div class="riwayat-card-info-grid">
+                                <div class="riwayat-card-info">
+                                    <span>VOLUME</span>
+                                    <strong>${escapeHtml(item.volume || '0')} L</strong>
+                                </div>
+                                <div class="riwayat-card-info">
+                                    <span>NILAI</span>
+                                    <strong>Rp ${Number(item.value || 0).toLocaleString('id-ID')}</strong>
+                                </div>
+                                <div class="riwayat-card-info">
+                                    <span>STATUS</span>
+                                    <strong>${statusControl}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="riwayat-card-footer" onclick="event.stopPropagation()">
+                            <span class="riwayat-card-id">ID: ${escapeHtml(id || '-')}</span>
+                            <div class="riwayat-card-actions">
+                                <button type="button" onclick="lihatDetail('${escapeHtml(id)}')"
+                                    class="riwayat-card-btn detail">👁 DETAIL</button>
+                                <button type="button" onclick="editRiwayat('${escapeHtml(id)}')"
+                                    class="riwayat-card-btn edit">✏️ EDIT</button>
+                                <button type="button" onclick="kirimUlangWA('${escapeHtml(id)}')"
+                                    class="riwayat-card-btn whatsapp">💬 WA</button>
+                                <button type="button" onclick="hapusRiwayat('${escapeHtml(id)}')"
+                                    class="riwayat-card-btn delete">🗑️</button>
+                            </div>
+                        </div>
+                    </article>`;
+            }).join('');
+
+            const bulkControls = `
+                <div class="riwayat-card-toolbar">
+                    <div class="riwayat-card-toolbar-left">
+                        <label class="riwayat-select-all">
+                            <input type="checkbox" id="selectAllRiwayatVisible"
+                                onclick="toggleSelectAllRiwayatVisible(true)"
+                                class="riwayat-select-checkbox">
+                            <span>Pilih semua</span>
+                        </label>
+                        <span class="riwayat-selected-badge">
+                            <span id="selectedRiwayatCount">0</span> dipilih
+                        </span>
+                    </div>
+                    <button type="button" id="btnHapusRiwayatTerpilih"
+                        onclick="hapusRiwayatTerpilih()" disabled
+                        class="riwayat-delete-selected">🗑️ HAPUS TERPILIH</button>
+                </div>`;
+
+            const adminStatusControls = isAdmin ? `
+                <div class="riwayat-admin-status-toolbar">
+                    <button type="button" onclick="resetPilihanStatusRiwayat()" class="riwayat-admin-btn reset">RESET</button>
+                    <button type="button" onclick="doneBulkStatusRiwayat()" class="riwayat-admin-btn done">DONE</button>
+                    <span id="bulkStatusInfo">Pilih status pada masing-masing transaksi lalu klik DONE.</span>
                 </div>` : '';
 
-            container.innerHTML = `
-                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                    ${bulkControls}
-                    <div class="riwayat-table-wrap">
-                        <table class="riwayat-table w-full text-left border-collapse text-[10px] ${!isAdmin ? 'riwayat-sales-table' : ''}" style="min-width: 1090px;">
-                            <thead>
-                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap w-10">
-                                        <input type="checkbox" id="selectAllRiwayatVisible" onclick="toggleSelectAllRiwayatVisible(true)"
-                                            class="w-3.5 h-3.5 accent-emerald-600 cursor-pointer" title="Pilih semua yang tampil">
-                                    </th>
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">No</th>
-                                    
-                                    <th class="p-2.5 font-bold whitespace-nowrap">Tanggal</th>
-                                    <th class="p-2.5 font-bold whitespace-nowrap">Outlet</th>
-                                    <th class="p-2.5 font-bold whitespace-nowrap">Produk</th>
-                                    <th class="p-2.5 font-bold text-right whitespace-nowrap">Volume</th>
-                                    <th class="p-2.5 font-bold text-right whitespace-nowrap">Nilai</th>
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">Status</th>
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>
+            const pagination = isAdmin && totalPages > 1 ? `
+                <div class="riwayat-card-pagination">
+                    <span>Menampilkan ${startIndex + 1}-${Math.min(startIndex + RIWAYAT_PAGE_SIZE, data.length)} dari ${data.length} transaksi</span>
+                    <div class="riwayat-pagination-buttons">
+                        <button type="button" onclick="changeRiwayatPage(-1)" ${riwayatPage <= 1 ? 'disabled' : ''}>‹</button>
+                        <strong>${riwayatPage}/${totalPages}</strong>
+                        <button type="button" onclick="changeRiwayatPage(1)" ${riwayatPage >= totalPages ? 'disabled' : ''}>›</button>
                     </div>
-                    ${isAdmin && totalPages > 1 ? `<div class="flex items-center justify-between gap-2 px-3 py-2 border-t border-slate-200 bg-slate-50 text-[10px]"><span class="text-slate-500">Menampilkan ${startIndex + 1}-${Math.min(startIndex + RIWAYAT_PAGE_SIZE, data.length)} dari ${data.length} transaksi</span><div class="flex items-center gap-1"><button type="button" onclick="changeRiwayatPage(-1)" class="px-2 py-1 rounded border bg-white ${riwayatPage <= 1 ? 'opacity-40 cursor-not-allowed' : ''}" ${riwayatPage <= 1 ? 'disabled' : ''}>‹</button><span class="px-2 font-bold">Halaman ${riwayatPage}/${totalPages}</span><button type="button" onclick="changeRiwayatPage(1)" class="px-2 py-1 rounded border bg-white ${riwayatPage >= totalPages ? 'opacity-40 cursor-not-allowed' : ''}" ${riwayatPage >= totalPages ? 'disabled' : ''}>›</button></div></div>` : ''}
-                </div>`;
+                </div>` : '';
+
+            container.innerHTML = `${bulkControls}${adminStatusControls}<div class="riwayat-card-list">${cards}</div>${pagination}`;
             updateSelectedRiwayatUI();
         }
 
