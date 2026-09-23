@@ -1284,6 +1284,54 @@ html,body{height:100%;}
 }
 </style>
 
+
+<style id="mobile-bottom-scroll-fix">
+/* =========================================================
+   CASTROL - FIX SCROLL HP
+   Konten paling bawah tidak lagi tertutup/terpotong.
+   Tidak mengubah fungsi JavaScript / Apps Script.
+   ========================================================= */
+@media (max-width: 767px) {
+    html,
+    body {
+        height: 100%;
+        min-height: 100%;
+        overflow: hidden !important;
+    }
+
+    #app.app-shell {
+        height: 100dvh !important;
+        min-height: 0 !important;
+        max-height: 100dvh !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    #app > .p-4.flex-1.overflow-y-auto {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: auto;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+        scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
+
+    #mainPage {
+        padding-bottom: 20px !important;
+    }
+
+    #loginPage,
+    #registerPage {
+        padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important;
+    }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -2688,7 +2736,7 @@ html,body{height:100%;}
   <div class="monitoring-point-head">
     <div>
       <div class="monitoring-point-title">Point Trip Tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')}</div>
-      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')} </div>
+      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')} • sumber DAMEN</div>
       <div class="monitoring-point-subtitle">Semua kategori • Tahun ${item.pointYear||new Date().getFullYear()}</div>
     </div>
     <div class="monitoring-point-total-wrap">
@@ -2701,7 +2749,7 @@ html,body{height:100%;}
     <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton ekuivalen</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
   </div>
   ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
-  <div class="monitoring-point-formula"><b></div>
+  <div class="monitoring-point-formula"><b>Cara hitung:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
 </div>
                     </div></div>`;
             });
@@ -2726,7 +2774,7 @@ html,body{height:100%;}
                     <div class="rounded-xl bg-gradient-to-r from-slate-900 to-emerald-900 text-white p-3">
                         <div class="text-[9px] uppercase tracking-wider text-emerald-300 font-bold">Outlet Monitoring</div>
                         <div class="text-sm font-extrabold mt-1">${escapeHtml(data.outlet||'-')}</div>
-                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')}</div>
+                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')} • Actual DAMEN</div>
                     </div>
                     <div class="modal-detail-summary">
                         <div class="modal-stat-card"><div class="modal-stat-label">Target</div><div class="modal-stat-value">${formatNumberID(target,1)} dus</div></div>
