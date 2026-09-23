@@ -1186,71 +1186,121 @@ html,body{height:100%;}
     const CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
     window.CASTROL_API_URL = CASTROL_API_URL;
 
-    const iframe = document.createElement('iframe');
-    iframe.id = 'castrolApiBridge';
-    iframe.src = CASTROL_API_URL + (CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?') + 'bridge=1';
-    iframe.setAttribute('aria-hidden', 'true');
-    iframe.style.cssText = 'position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
-    (document.documentElement || document.body).appendChild(iframe);
-
-    const pending = new Map();
+    let iframe = null;
+    let bridgeReady = false;
+    let bridgeFailed = false;
     let seq = 0;
+    const pending = new Map();
+    const queue = [];
     const REQUEST_TIMEOUT = 120000;
+    const BRIDGE_READY_TIMEOUT = 30000;
 
-    window.addEventListener('message', function (event) {
-        const data = event.data || {};
-        if (data.source !== 'castrol-apps-script') return;
-        if (data.type === 'ready') return;
-        if (!data.requestId) return;
+    function createBridgeIframe() {
+        if (iframe) return;
+        iframe = document.createElement('iframe');
+        iframe.id = 'castrolApiBridge';
+        iframe.src = CASTROL_API_URL + (CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?') + 'bridge=1';
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
+        (document.body || document.documentElement).appendChild(iframe);
+    }
 
-        const item = pending.get(data.requestId);
-        if (!item) return;
-        pending.delete(data.requestId);
-        clearTimeout(item.timer);
+    function rejectRequest(req, message) {
+        if (!req) return;
+        clearTimeout(req.timer);
+        pending.delete(req.requestId);
+        try { req.reject(new Error(message)); } catch (e) {}
+    }
 
-        if (data.ok) item.resolve(data.result);
-        else item.reject(new Error(data.error || 'Terjadi kesalahan pada server Apps Script.'));
-    });
+    function sendRequest(req) {
+        if (!iframe || !iframe.contentWindow || !bridgeReady) {
+            queue.push(req);
+            return;
+        }
+        try {
+            iframe.contentWindow.postMessage({
+                source: 'castrol-github',
+                requestId: req.requestId,
+                method: req.method,
+                args: req.args
+            }, '*');
+        } catch (err) {
+            rejectRequest(req, err && err.message ? err.message : String(err));
+        }
+    }
+
+    function flushQueue() {
+        if (!bridgeReady) return;
+        while (queue.length) sendRequest(queue.shift());
+    }
 
     function callServer(method, args) {
         return new Promise(function (resolve, reject) {
             const requestId = 'castrol_' + Date.now() + '_' + (++seq);
-            const timer = setTimeout(function () {
+            const req = {
+                requestId: requestId,
+                method: method,
+                args: Array.isArray(args) ? args : [],
+                resolve: resolve,
+                reject: reject,
+                timer: null
+            };
+            req.timer = setTimeout(function () {
+                const wasQueued = queue.some(function (x) { return x.requestId === requestId; });
+                if (wasQueued) {
+                    for (let i = queue.length - 1; i >= 0; i--) {
+                        if (queue[i].requestId === requestId) queue.splice(i, 1);
+                    }
+                }
                 pending.delete(requestId);
-                reject(new Error('Request ke server timeout: ' + method));
+                reject(new Error(bridgeFailed
+                    ? 'Bridge Apps Script tidak aktif. Pastikan ApiBridge.html sudah ditambahkan dan Web App Apps Script sudah di-deploy ulang.'
+                    : 'Request ke server timeout: ' + method));
             }, REQUEST_TIMEOUT);
-
-            pending.set(requestId, { resolve: resolve, reject: reject, timer: timer });
-
-            try {
-                iframe.contentWindow.postMessage({
-                    source: 'castrol-github',
-                    requestId: requestId,
-                    method: method,
-                    args: Array.isArray(args) ? args : []
-                }, '*');
-            } catch (err) {
-                clearTimeout(timer);
-                pending.delete(requestId);
-                reject(err);
-            }
+            pending.set(requestId, req);
+            if (bridgeReady) sendRequest(req);
+            else queue.push(req);
         });
     }
 
-    // Compatibility layer: kode lama yang memakai google.script.run tetap berjalan.
+    window.addEventListener('message', function (event) {
+        const data = event.data || {};
+        if (!iframe || event.source !== iframe.contentWindow) return;
+        if (data.source !== 'castrol-apps-script') return;
+
+        if (data.type === 'ready') {
+            bridgeReady = true;
+            bridgeFailed = false;
+            flushQueue();
+            return;
+        }
+
+        if (!data.requestId) return;
+        const req = pending.get(data.requestId);
+        if (!req) return;
+        pending.delete(data.requestId);
+        clearTimeout(req.timer);
+        if (data.ok) req.resolve(data.result);
+        else req.reject(new Error(data.error || 'Terjadi kesalahan pada server Apps Script.'));
+    });
+
+    function startBridge() {
+        createBridgeIframe();
+        setTimeout(function () {
+            if (!bridgeReady) bridgeFailed = true;
+        }, BRIDGE_READY_TIMEOUT);
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startBridge);
+    else startBridge();
+
+    // Compatibility layer: seluruh kode lama google.script.run tetap bisa dipakai.
     function makeRunner(successHandler, failureHandler, userObject) {
         return new Proxy({}, {
             get: function (_target, property) {
-                if (property === 'withSuccessHandler') {
-                    return function (fn) { return makeRunner(fn, failureHandler, userObject); };
-                }
-                if (property === 'withFailureHandler') {
-                    return function (fn) { return makeRunner(successHandler, fn, userObject); };
-                }
-                if (property === 'withUserObject') {
-                    return function (obj) { return makeRunner(successHandler, failureHandler, obj); };
-                }
-
+                if (property === 'withSuccessHandler') return function (fn) { return makeRunner(fn, failureHandler, userObject); };
+                if (property === 'withFailureHandler') return function (fn) { return makeRunner(successHandler, fn, userObject); };
+                if (property === 'withUserObject') return function (obj) { return makeRunner(successHandler, failureHandler, obj); };
                 return function () {
                     const args = Array.prototype.slice.call(arguments);
                     callServer(String(property), args).then(function (result) {
