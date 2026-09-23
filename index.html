@@ -3,108 +3,41 @@
 <head>
     <!-- CASTROL FINAL API: JSONP, tanpa iframe/google.script.run -->
     <script>
-    (function () {
-        'use strict';
-
-        const CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
-        window.CASTROL_API_URL = CASTROL_API_URL;
-
-        let seq = 0;
-        const REQUEST_TIMEOUT = 60000;
-
-        function makeRunner(successHandler, failureHandler, userObject) {
-            return new Proxy({}, {
-                get: function (_target, property) {
-                    if (property === 'withSuccessHandler') {
-                        return function (fn) {
-                            return makeRunner(fn, failureHandler, userObject);
-                        };
-                    }
-                    if (property === 'withFailureHandler') {
-                        return function (fn) {
-                            return makeRunner(successHandler, fn, userObject);
-                        };
-                    }
-                    if (property === 'withUserObject') {
-                        return function (obj) {
-                            return makeRunner(successHandler, failureHandler, obj);
-                        };
-                    }
-
-                    return function () {
-                        const method = String(property);
-                        const args = Array.prototype.slice.call(arguments);
-                        const callbackName = '__castrol_jsonp_' + Date.now() + '_' + (++seq);
-                        const script = document.createElement('script');
-                        let finished = false;
-
-                        function cleanup() {
-                            if (script && script.parentNode) script.parentNode.removeChild(script);
-                            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
-                        }
-
-                        function succeed(payload) {
-                            if (finished) return;
-                            finished = true;
-                            clearTimeout(timer);
-                            cleanup();
-                            if (payload && payload.ok === false) {
-                                fail(new Error(payload.error || 'Terjadi kesalahan pada server Apps Script.'));
-                                return;
-                            }
-                            if (typeof successHandler === 'function') {
-                                successHandler(payload ? payload.result : undefined, userObject);
-                            }
-                        }
-
-                        function fail(error) {
-                            if (finished) return;
-                            finished = true;
-                            clearTimeout(timer);
-                            cleanup();
-                            const err = error instanceof Error ? error : new Error(String(error || 'Request API gagal.'));
-                            if (typeof failureHandler === 'function') failureHandler(err, userObject);
-                            else console.error('[Castrol] API error:', err);
-                        }
-
-                        window[callbackName] = succeed;
-                        script.async = true;
-                        script.onerror = function () {
-                            fail(new Error('Tidak dapat mengakses Apps Script. Pastikan Web App di-deploy dengan Execute as: Me dan Who has access: Anyone.'));
-                        };
-
-                        let encodedArgs = '';
-                        try {
-                            encodedArgs = encodeURIComponent(JSON.stringify(args));
-                        } catch (e) {
-                            fail(e);
-                            return makeRunner(successHandler, failureHandler, userObject);
-                        }
-
-                        const sep = CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?';
-                        script.src = CASTROL_API_URL + sep
-                            + 'api=1'
-                            + '&method=' + encodeURIComponent(method)
-                            + '&args=' + encodedArgs
-                            + '&callback=' + encodeURIComponent(callbackName)
-                            + '&_=' + Date.now();
-
-                        const timer = setTimeout(function () {
-                            fail(new Error('Request ke Apps Script timeout: ' + method));
-                        }, REQUEST_TIMEOUT);
-
-                        (document.head || document.documentElement).appendChild(script);
-                        return makeRunner(successHandler, failureHandler, userObject);
-                    };
-                }
-            });
-        }
-
-        window.google = window.google || {};
-        window.google.script = window.google.script || {};
-        window.google.script.run = makeRunner(null, null, null);
-    })();
-    </script>
+(function(){
+  'use strict';
+  const CASTROL_API_URL='https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
+  window.CASTROL_API_URL=CASTROL_API_URL;
+  let seq=0;
+  const REQUEST_TIMEOUT=20000;
+  const pending={};
+  function request(method,args,ok,fail){
+    const cb='__castrol_cb_'+Date.now()+'_'+(++seq);
+    const s=document.createElement('script');
+    let done=false;
+    const cleanup=()=>{if(s.parentNode)s.parentNode.removeChild(s);try{delete window[cb]}catch(e){window[cb]=undefined}};
+    const finish=(err,payload)=>{
+      if(done)return; done=true; clearTimeout(timer); cleanup();
+      if(err){ if(typeof fail==='function') fail(err); else console.error(err); return; }
+      if(payload&&payload.ok===false){const e=new Error(payload.error||'API gagal'); if(typeof fail==='function')fail(e);else console.error(e);return;}
+      if(typeof ok==='function')ok(payload?payload.result:undefined);
+    };
+    window[cb]=p=>finish(null,p);
+    s.onerror=()=>finish(new Error('Tidak dapat mengakses Apps Script Web App.'));
+    const q=CASTROL_API_URL+'?api=1&method='+encodeURIComponent(method)+'&args='+encodeURIComponent(JSON.stringify(args||[]))+'&callback='+encodeURIComponent(cb)+'&_='+Date.now();
+    const timer=setTimeout(()=>finish(new Error('Request '+method+' timeout (20 detik).')),REQUEST_TIMEOUT);
+    s.async=true; s.src=q; (document.head||document.documentElement).appendChild(s);
+  }
+  function makeRunner(success,failure,userObject){
+    return new Proxy({}, {get:function(_,prop){
+      if(prop==='withSuccessHandler')return fn=>makeRunner(fn,failure,userObject);
+      if(prop==='withFailureHandler')return fn=>makeRunner(success,fn,userObject);
+      if(prop==='withUserObject')return obj=>makeRunner(success,failure,obj);
+      return function(){request(String(prop),Array.prototype.slice.call(arguments),r=>{if(typeof success==='function')success(r,userObject)},e=>{if(typeof failure==='function')failure(e,userObject);else console.error('[Castrol]',e)});return makeRunner(success,failure,userObject)};
+    }});
+  }
+  window.google=window.google||{}; window.google.script=window.google.script||{}; window.google.script.run=makeRunner(null,null,null);
+})();
+</script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -631,7 +564,7 @@
 #tabTambahCustomer,#tabPencapaian,#tabOutletKontrak,#tabOutletBWS,#tabPricelist{display:none!important}
 
 .monitoring-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
-.monitoring-outlet-card{background:#fff;border:1px solid #dbe7df;border-radius:18px;box-shadow:0 5px 18px rgba(15,42,27,.06);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:pointer}
+.monitoring-outlet-card{background:#fff;border:1px solid #dbe7df;border-radius:18px;box-shadow:0 5px 18px rgba(15,42,27,.06);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:default}
 .monitoring-outlet-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(15,42,27,.10);border-color:#a8d2b8}
 .monitoring-card-head{padding:14px 15px 11px;background:linear-gradient(135deg,#f7fbf8,#edf7f0);border-bottom:1px solid #e4eee7}
 .monitoring-card-kicker{font-size:8px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#5f8a6e}
@@ -802,7 +735,7 @@ button{touch-action:manipulation}
         </style>
 
 <style id="header-account-actions">
-.header-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px 9px;border:1px solid rgba(148,163,184,.22);border-radius:10px;background:rgba(15,23,42,.35);color:#cbd5e1;font-size:10px;font-weight:800;cursor:pointer;transition:.18s ease;white-space:nowrap}
+.header-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px 9px;border:1px solid rgba(148,163,184,.22);border-radius:10px;background:rgba(15,23,42,.35);color:#cbd5e1;font-size:10px;font-weight:800;cursor:default;transition:.18s ease;white-space:nowrap}
 .header-action-btn:hover{background:rgba(15,23,42,.62);color:#fff;border-color:rgba(52,211,153,.35);transform:translateY(-1px)}
 .header-action-icon{font-size:13px;line-height:1}
 .header-action-danger:hover{border-color:rgba(248,113,113,.35);color:#fecaca}
@@ -1063,21 +996,21 @@ body{
 #customerManageModal .select2-container{z-index:100001!important}
 #customerManageModal .select2-dropdown{z-index:100002!important}
 #customerManageModal .select2-container--open{z-index:100001!important}
-#customerManageModal .select2-selection{cursor:pointer!important}
+#customerManageModal .select2-selection{cursor:default!important}
 #tabTambahCustomer .select2-container .select2-selection--single{height:44px!important;border-radius:12px!important;border-color:#d7dee8!important;padding:7px 10px!important}
 #tabTambahCustomer .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:27px!important;font-size:12px!important}
 #tabTambahCustomer .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px!important}
-#customerMaps{cursor:pointer}
+#customerMaps{cursor:default}
 #customerTableWrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid #dfe8e2;border-radius:16px;background:#fff}
 #customerTable{width:100%;min-width:820px;border-collapse:separate;border-spacing:0;font-size:11px}
 #customerTable th{padding:10px 12px;text-align:left;background:#f3f8f4;color:#475569;border-bottom:1px solid #dfe8e2;white-space:nowrap;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-#customerTable td{padding:10px 12px;border-bottom:1px solid #edf2ef;color:#334155;background:#fff;white-space:nowrap;cursor:pointer}
+#customerTable td{padding:10px 12px;border-bottom:1px solid #edf2ef;color:#334155;background:#fff;white-space:nowrap;cursor:default}
 #customerTable tbody tr:hover td{background:#f8fafc}
 #customerTable th:nth-child(2),#customerTable td:nth-child(2){background:#fff;min-width:220px}
 #customerTable th:nth-child(2){z-index:7;background:#f3f8f4}
 #customerTable tbody tr:hover td:nth-child(2){background:#f8fafc}
 .customer-table-empty{text-align:center!important;padding:32px 12px!important;color:#94a3b8!important;cursor:default!important}
-.customer-action-btn{border:1px solid #dfe8e2;border-radius:9px;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer;background:#fff}
+.customer-action-btn{border:1px solid #dfe8e2;border-radius:9px;padding:6px 9px;font-size:10px;font-weight:800;cursor:default;background:#fff}
 @media(max-width:767px){#tabTambahCustomer{max-width:none}#tabTambahCustomer form{padding:12px}#customerTable{min-width:760px}}
 </style>
 
@@ -1287,14 +1220,14 @@ html,body{height:100%;}
 
 <style id="riwayat-card-view">
 .riwayat-card-list{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
-.riwayat-card{width:100%;max-width:710px;box-sizing:border-box;background:#fff;border:1px solid #d6e0e7;border-radius:17px;overflow:hidden;box-shadow:0 2px 8px rgba(15,42,27,.045);transition:.16s ease;cursor:pointer}
+.riwayat-card{width:100%;max-width:710px;box-sizing:border-box;background:#fff;border:1px solid #d6e0e7;border-radius:17px;overflow:hidden;box-shadow:0 2px 8px rgba(15,42,27,.045);transition:.16s ease;cursor:default}
 .riwayat-card:hover{transform:translateY(-1px);border-color:#c6d5df;box-shadow:0 5px 14px rgba(15,42,27,.07)}
 .riwayat-card-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 17px 13px;background:#fff;border-bottom:1px solid #e7edf1}
 .riwayat-card-date-wrap{display:flex;align-items:center;gap:9px;min-width:0}
 .riwayat-card-number{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 6px;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:9px;font-weight:900}
 .riwayat-card-date{color:#8a9aae;font-size:10px;font-weight:700;white-space:nowrap}
-.riwayat-card-check{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
-.riwayat-card-check input{width:18px;height:18px;accent-color:#059669;cursor:pointer}
+.riwayat-card-check{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:default}
+.riwayat-card-check input{width:18px;height:18px;accent-color:#059669;cursor:default}
 .riwayat-card-content{padding:0 17px}
 .riwayat-card-main{padding:0 0 13px}
 .riwayat-card-label{margin-bottom:5px;color:#94a3b8;font-size:8px;line-height:1;font-weight:900;letter-spacing:.11em}
@@ -1318,17 +1251,17 @@ html,body{height:100%;}
 .riwayat-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 17px;border-top:0;background:#fff}
 .riwayat-card-id{min-width:0;color:#94a3b8;font-size:8px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .riwayat-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-shrink:0}
-.riwayat-card-btn{min-height:34px;padding:6px 13px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-size:9px;font-weight:900;cursor:pointer;transition:.16s ease;white-space:nowrap}
+.riwayat-card-btn{min-height:34px;padding:6px 13px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-size:9px;font-weight:900;cursor:default;transition:.16s ease;white-space:nowrap}
 .riwayat-card-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(15,23,42,.08)}
 .riwayat-card-btn.detail{color:#475569;border-color:#dbe2e8}.riwayat-card-btn.edit{color:#fff;border-color:#2563eb;background:#2563eb}.riwayat-card-btn.whatsapp{color:#fff;border-color:#059669;background:#059669}.riwayat-card-btn.delete{color:#94a3b8;border-color:#fecdd3;background:#fff1f2}
 .riwayat-card-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:9px 10px;border:1px solid #e0e9e3;border-radius:13px;background:#fff}
 .riwayat-card-toolbar-left{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.riwayat-select-all{display:flex;align-items:center;gap:6px;color:#475569;font-size:9px;font-weight:800;cursor:pointer}.riwayat-select-all input{width:15px;height:15px;accent-color:#059669}
+.riwayat-select-all{display:flex;align-items:center;gap:6px;color:#475569;font-size:9px;font-weight:800;cursor:default}.riwayat-select-all input{width:15px;height:15px;accent-color:#059669}
 .riwayat-selected-badge{padding:4px 8px;border-radius:999px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;font-size:8px;font-weight:800}
-.riwayat-delete-selected{min-height:29px;padding:6px 10px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:8px;font-weight:900;cursor:pointer}.riwayat-delete-selected:disabled{opacity:.45;cursor:not-allowed}
+.riwayat-delete-selected{min-height:29px;padding:6px 10px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:8px;font-weight:900;cursor:default}.riwayat-delete-selected:disabled{opacity:.45;cursor:not-allowed}
 .riwayat-admin-status-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
-.riwayat-admin-status-toolbar>span{color:#64748b;font-size:8px;font-weight:700}.riwayat-admin-btn{min-height:27px;padding:5px 10px;border-radius:7px;font-size:8px;font-weight:900;cursor:pointer}.riwayat-admin-btn.reset{color:#475569;background:#fff;border:1px solid #cbd5e1}.riwayat-admin-btn.done{color:#fff;background:#0f172a;border:1px solid #0f172a}
-.riwayat-card-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding:9px 3px;color:#64748b;font-size:9px}.riwayat-pagination-buttons{display:flex;align-items:center;gap:5px}.riwayat-pagination-buttons button{min-width:29px;min-height:28px;border:1px solid #dbe3df;border-radius:7px;background:#fff;color:#475569;font-weight:900;cursor:pointer}.riwayat-pagination-buttons button:disabled{opacity:.4;cursor:not-allowed}
+.riwayat-admin-status-toolbar>span{color:#64748b;font-size:8px;font-weight:700}.riwayat-admin-btn{min-height:27px;padding:5px 10px;border-radius:7px;font-size:8px;font-weight:900;cursor:default}.riwayat-admin-btn.reset{color:#475569;background:#fff;border:1px solid #cbd5e1}.riwayat-admin-btn.done{color:#fff;background:#0f172a;border:1px solid #0f172a}
+.riwayat-card-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding:9px 3px;color:#64748b;font-size:9px}.riwayat-pagination-buttons{display:flex;align-items:center;gap:5px}.riwayat-pagination-buttons button{min-width:29px;min-height:28px;border:1px solid #dbe3df;border-radius:7px;background:#fff;color:#475569;font-weight:900;cursor:default}.riwayat-pagination-buttons button:disabled{opacity:.4;cursor:not-allowed}
 @media (max-width:600px){
  .riwayat-card{max-width:none;border-radius:15px}
  .riwayat-card-header{padding:13px 15px 11px}.riwayat-card-content{padding:0 15px}.riwayat-card-footer{padding:9px 15px}
@@ -1997,11 +1930,15 @@ html,body{height:100%;}
                 const adminTools = document.getElementById('riwayatAdminTools');
                 if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
 
-                if (!isAdminLogin) loadCustomerContext(currentUser);
-                else loadPencapaianSalesFilter();
-                loadRiwayat(true, true);
-                if (!isAdminLogin) loadInputMasterData();
-                if (isAdminLogin) switchTab('riwayat');
+                if (isAdminLogin) {
+                    clearAuthState();
+                    document.getElementById('mainPage').classList.add('hidden');
+                    document.getElementById('mainHeader').classList.add('hidden');
+                    document.getElementById('leftNav').classList.add('hidden');
+                    document.getElementById('loginPage').classList.remove('hidden');
+                    return false;
+                }
+                bootstrapSession(false);
                 return true;
             } catch (e) {
                 console.warn("Sesi lokal tidak valid:", e);
@@ -2027,13 +1964,68 @@ html,body{height:100%;}
             showLoading(false);
             // Produk/Cashback tidak lagi dimuat saat halaman pertama dibuka.
             // Keduanya dimuat hanya setelah login Sales atau saat tab Input dibuka.
-            if (restored && String(currentUsernameInput || '').toLowerCase() !== 'admin') {
-                loadInputMasterData();
-            }
             setTanggalTambahCustomer();
             previewCustCode();
             startAutoRefresh();
         };
+
+        function applyInputMasterLists(products, cashbackList) {
+            produkDataList = Array.isArray(products) ? products : [];
+            let select = $('#addItemProduk');
+            if (select && select.length) {
+                select.empty().append('<option value="">-- Pilih Produk --</option>');
+                produkDataList.forEach(function(p){
+                    select.append(new Option(p.nama + " (" + p.liter + "L | Rp " + Number(p.harga).toLocaleString('id-ID') + ")", p.nama));
+                });
+                refreshSelect2('#addItemProduk');
+            }
+            let selectCB = $('#cashbackSelect');
+            if (selectCB && selectCB.length) {
+                selectCB.empty().append('<option value="">-- Pilih Cashback --</option>');
+                (Array.isArray(cashbackList) ? cashbackList : []).forEach(function(cb){ selectCB.append(new Option(cb, cb)); });
+                refreshSelect2('#cashbackSelect');
+            }
+            inputMasterLoading=false;
+            inputMasterLoaded=true;
+        }
+
+        function applyInitialRiwayat(data) {
+            globalRiwayatData = Array.isArray(data) ? data : [];
+            riwayatLoading=false;
+            if (currentUsernameInput && currentUsernameInput.toLowerCase() === 'admin') populateRiwayatDsrFilter();
+            populateRiwayatYearFilter(globalRiwayatData);
+            filterRiwayat();
+        }
+
+        function bootstrapSession(showErrors) {
+            showLoading(true);
+            google.script.run.withSuccessHandler(function(bundle){
+                if (!bundle || !bundle.success) {
+                    showLoading(false);
+                    clearAuthState();
+                    document.getElementById('mainPage').classList.add('hidden');
+                    document.getElementById('mainHeader').classList.add('hidden');
+                    document.getElementById('leftNav').classList.add('hidden');
+                    document.getElementById('loginPage').classList.remove('hidden');
+                    if (showErrors) showModal('Login Gagal', bundle && bundle.message ? bundle.message : 'Sesi tidak valid.');
+                    return;
+                }
+                currentUser = bundle.custCode || currentUsernameInput;
+                document.getElementById('inputOutlet').value = bundle.outlet || '';
+                document.getElementById('inputCustCode').value = bundle.custCode || currentUser;
+                document.getElementById('inputChannel').value = bundle.channel || '';
+                document.getElementById('inputTanggal').value = new Date().toISOString().slice(0,10);
+                const oo=document.getElementById('customerInputOutlet'); if(oo) oo.textContent=bundle.outlet || '-';
+                applyInputMasterLists(bundle.products, bundle.cashback);
+                applyInitialRiwayat(bundle.riwayat);
+                saveAuthState();
+                showLoading(false);
+            }).withFailureHandler(function(err){
+                showLoading(false);
+                clearAuthState();
+                if (showErrors) showModal('Gagal memuat aplikasi', err && err.message ? err.message : 'Terjadi kesalahan saat memuat data.');
+            }).bootstrapApp(currentUsernameInput);
+        }
 
         let inputMasterLoading = false;
         let inputMasterLoaded = false;
@@ -2115,11 +2107,17 @@ html,body{height:100%;}
                     const adminTools = document.getElementById('riwayatAdminTools');
                     if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
                     saveAuthState();
-                    if (!isAdminLogin) loadCustomerContext(currentUser);
-                    else loadPencapaianSalesFilter();
-                    loadRiwayat(true, true);
-                    if (!isAdminLogin) loadInputMasterData();
-                    if (isAdminLogin) switchTab('riwayat');
+                    if (isAdminLogin) {
+                        showLoading(false);
+                        showModal('Login Gagal','Login dengan username ADMIN tidak diperbolehkan.');
+                        clearAuthState();
+                        document.getElementById('mainPage').classList.add('hidden');
+                        document.getElementById('mainHeader').classList.add('hidden');
+                        document.getElementById('leftNav').classList.add('hidden');
+                        document.getElementById('loginPage').classList.remove('hidden');
+                        return;
+                    }
+                    bootstrapSession(false);
                 } else {
                     showModal("Login Gagal", res.message);
                 }
@@ -4245,12 +4243,12 @@ html,body{height:100%;}
             // 3. Monitoring
             // 4. Pencapaian Sales
             if (activeTab === 'tabMonitoring') return;
-            if (activeTab === 'tabRiwayat') loadRiwayat(true, true);
+            if (activeTab === 'tabRiwayat') loadRiwayat(false, true);
         }
 
         function startAutoRefresh() {
             if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-            autoRefreshTimer = setInterval(autoRefreshActiveTab, 5000);
+            autoRefreshTimer = setInterval(autoRefreshActiveTab, 60000);
         }
 
         function switchTab(tab) {
