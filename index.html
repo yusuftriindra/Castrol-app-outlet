@@ -2688,7 +2688,7 @@ html,body{height:100%;}
   <div class="monitoring-point-head">
     <div>
       <div class="monitoring-point-title">Point Trip Tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')}</div>
-      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')} • sumber DAMEN</div>
+      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')} </div>
       <div class="monitoring-point-subtitle">Semua kategori • Tahun ${item.pointYear||new Date().getFullYear()}</div>
     </div>
     <div class="monitoring-point-total-wrap">
@@ -2701,7 +2701,7 @@ html,body{height:100%;}
     <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton ekuivalen</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
   </div>
   ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
-  <div class="monitoring-point-formula"><b>Cara hitung:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
+  <div class="monitoring-point-formula"><b></div>
 </div>
                     </div></div>`;
             });
