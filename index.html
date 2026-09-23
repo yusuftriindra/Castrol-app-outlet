@@ -2410,8 +2410,7 @@ html,body{height:100%;}
                 ` : `<span class="${statusClass}">${escapeHtml(status)}</span>`;
 
                 return `
-                    <article class="riwayat-card" data-order-id="${escapeHtml(id)}"
-                        onclick="lihatDetail('${escapeHtml(id)}')">
+                    <article class="riwayat-card" data-order-id="${escapeHtml(id)}">
                         <div class="riwayat-card-header">
                             <div class="riwayat-card-date-wrap">
                                 <label class="riwayat-card-check" title="Pilih transaksi" onclick="event.stopPropagation()">
