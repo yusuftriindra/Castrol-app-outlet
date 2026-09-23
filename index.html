@@ -2306,7 +2306,7 @@ html,body{height:100%;}
                 tanggal: document.getElementById('inputTanggal').value || new Date().toISOString().slice(0,10),
                 payment: 'CASH',
                 disc: '0%',
-                note: '-',
+                note: (document.getElementById('inputNote') ? document.getElementById('inputNote').value.trim() : '') || '-',
                 cashback: '',
                 items: shoppingCart
             };
