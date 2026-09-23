@@ -2090,6 +2090,10 @@ html,body{height:100%;}
                 } else {
                     showModal("Login Gagal", res.message);
                 }
+            }).withFailureHandler(function(err) {
+                showLoading(false);
+                showModal("Login Error", "Tidak dapat terhubung ke server Apps Script.\n\n" + (err && err.message ? err.message : String(err)));
+                console.error("[Castrol] prosesLogin failed:", err);
             }).prosesLogin(currentUsernameInput);
         }
 
