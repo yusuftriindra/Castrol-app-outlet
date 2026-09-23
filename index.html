@@ -3,41 +3,108 @@
 <head>
     <!-- CASTROL FINAL API: JSONP, tanpa iframe/google.script.run -->
     <script>
-(function(){
-  'use strict';
-  const CASTROL_API_URL='https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
-  window.CASTROL_API_URL=CASTROL_API_URL;
-  let seq=0;
-  const REQUEST_TIMEOUT=20000;
-  const pending={};
-  function request(method,args,ok,fail){
-    const cb='__castrol_cb_'+Date.now()+'_'+(++seq);
-    const s=document.createElement('script');
-    let done=false;
-    const cleanup=()=>{if(s.parentNode)s.parentNode.removeChild(s);try{delete window[cb]}catch(e){window[cb]=undefined}};
-    const finish=(err,payload)=>{
-      if(done)return; done=true; clearTimeout(timer); cleanup();
-      if(err){ if(typeof fail==='function') fail(err); else console.error(err); return; }
-      if(payload&&payload.ok===false){const e=new Error(payload.error||'API gagal'); if(typeof fail==='function')fail(e);else console.error(e);return;}
-      if(typeof ok==='function')ok(payload?payload.result:undefined);
-    };
-    window[cb]=p=>finish(null,p);
-    s.onerror=()=>finish(new Error('Tidak dapat mengakses Apps Script Web App.'));
-    const q=CASTROL_API_URL+'?api=1&method='+encodeURIComponent(method)+'&args='+encodeURIComponent(JSON.stringify(args||[]))+'&callback='+encodeURIComponent(cb)+'&_='+Date.now();
-    const timer=setTimeout(()=>finish(new Error('Request '+method+' timeout (20 detik).')),REQUEST_TIMEOUT);
-    s.async=true; s.src=q; (document.head||document.documentElement).appendChild(s);
-  }
-  function makeRunner(success,failure,userObject){
-    return new Proxy({}, {get:function(_,prop){
-      if(prop==='withSuccessHandler')return fn=>makeRunner(fn,failure,userObject);
-      if(prop==='withFailureHandler')return fn=>makeRunner(success,fn,userObject);
-      if(prop==='withUserObject')return obj=>makeRunner(success,failure,obj);
-      return function(){request(String(prop),Array.prototype.slice.call(arguments),r=>{if(typeof success==='function')success(r,userObject)},e=>{if(typeof failure==='function')failure(e,userObject);else console.error('[Castrol]',e)});return makeRunner(success,failure,userObject)};
-    }});
-  }
-  window.google=window.google||{}; window.google.script=window.google.script||{}; window.google.script.run=makeRunner(null,null,null);
-})();
-</script>
+    (function () {
+        'use strict';
+
+        const CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
+        window.CASTROL_API_URL = CASTROL_API_URL;
+
+        let seq = 0;
+        const REQUEST_TIMEOUT = 60000;
+
+        function makeRunner(successHandler, failureHandler, userObject) {
+            return new Proxy({}, {
+                get: function (_target, property) {
+                    if (property === 'withSuccessHandler') {
+                        return function (fn) {
+                            return makeRunner(fn, failureHandler, userObject);
+                        };
+                    }
+                    if (property === 'withFailureHandler') {
+                        return function (fn) {
+                            return makeRunner(successHandler, fn, userObject);
+                        };
+                    }
+                    if (property === 'withUserObject') {
+                        return function (obj) {
+                            return makeRunner(successHandler, failureHandler, obj);
+                        };
+                    }
+
+                    return function () {
+                        const method = String(property);
+                        const args = Array.prototype.slice.call(arguments);
+                        const callbackName = '__castrol_jsonp_' + Date.now() + '_' + (++seq);
+                        const script = document.createElement('script');
+                        let finished = false;
+
+                        function cleanup() {
+                            if (script && script.parentNode) script.parentNode.removeChild(script);
+                            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+                        }
+
+                        function succeed(payload) {
+                            if (finished) return;
+                            finished = true;
+                            clearTimeout(timer);
+                            cleanup();
+                            if (payload && payload.ok === false) {
+                                fail(new Error(payload.error || 'Terjadi kesalahan pada server Apps Script.'));
+                                return;
+                            }
+                            if (typeof successHandler === 'function') {
+                                successHandler(payload ? payload.result : undefined, userObject);
+                            }
+                        }
+
+                        function fail(error) {
+                            if (finished) return;
+                            finished = true;
+                            clearTimeout(timer);
+                            cleanup();
+                            const err = error instanceof Error ? error : new Error(String(error || 'Request API gagal.'));
+                            if (typeof failureHandler === 'function') failureHandler(err, userObject);
+                            else console.error('[Castrol] API error:', err);
+                        }
+
+                        window[callbackName] = succeed;
+                        script.async = true;
+                        script.onerror = function () {
+                            fail(new Error('Tidak dapat mengakses Apps Script. Pastikan Web App di-deploy dengan Execute as: Me dan Who has access: Anyone.'));
+                        };
+
+                        let encodedArgs = '';
+                        try {
+                            encodedArgs = encodeURIComponent(JSON.stringify(args));
+                        } catch (e) {
+                            fail(e);
+                            return makeRunner(successHandler, failureHandler, userObject);
+                        }
+
+                        const sep = CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?';
+                        script.src = CASTROL_API_URL + sep
+                            + 'api=1'
+                            + '&method=' + encodeURIComponent(method)
+                            + '&args=' + encodedArgs
+                            + '&callback=' + encodeURIComponent(callbackName)
+                            + '&_=' + Date.now();
+
+                        const timer = setTimeout(function () {
+                            fail(new Error('Request ke Apps Script timeout: ' + method));
+                        }, REQUEST_TIMEOUT);
+
+                        (document.head || document.documentElement).appendChild(script);
+                        return makeRunner(successHandler, failureHandler, userObject);
+                    };
+                }
+            });
+        }
+
+        window.google = window.google || {};
+        window.google.script = window.google.script || {};
+        window.google.script.run = makeRunner(null, null, null);
+    })();
+    </script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -564,7 +631,7 @@
 #tabTambahCustomer,#tabPencapaian,#tabOutletKontrak,#tabOutletBWS,#tabPricelist{display:none!important}
 
 .monitoring-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
-.monitoring-outlet-card{background:#fff;border:1px solid #dbe7df;border-radius:18px;box-shadow:0 5px 18px rgba(15,42,27,.06);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:default}
+.monitoring-outlet-card{background:#fff;border:1px solid #dbe7df;border-radius:18px;box-shadow:0 5px 18px rgba(15,42,27,.06);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:pointer}
 .monitoring-outlet-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(15,42,27,.10);border-color:#a8d2b8}
 .monitoring-card-head{padding:14px 15px 11px;background:linear-gradient(135deg,#f7fbf8,#edf7f0);border-bottom:1px solid #e4eee7}
 .monitoring-card-kicker{font-size:8px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#5f8a6e}
@@ -735,7 +802,7 @@ button{touch-action:manipulation}
         </style>
 
 <style id="header-account-actions">
-.header-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px 9px;border:1px solid rgba(148,163,184,.22);border-radius:10px;background:rgba(15,23,42,.35);color:#cbd5e1;font-size:10px;font-weight:800;cursor:default;transition:.18s ease;white-space:nowrap}
+.header-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px 9px;border:1px solid rgba(148,163,184,.22);border-radius:10px;background:rgba(15,23,42,.35);color:#cbd5e1;font-size:10px;font-weight:800;cursor:pointer;transition:.18s ease;white-space:nowrap}
 .header-action-btn:hover{background:rgba(15,23,42,.62);color:#fff;border-color:rgba(52,211,153,.35);transform:translateY(-1px)}
 .header-action-icon{font-size:13px;line-height:1}
 .header-action-danger:hover{border-color:rgba(248,113,113,.35);color:#fecaca}
@@ -996,21 +1063,21 @@ body{
 #customerManageModal .select2-container{z-index:100001!important}
 #customerManageModal .select2-dropdown{z-index:100002!important}
 #customerManageModal .select2-container--open{z-index:100001!important}
-#customerManageModal .select2-selection{cursor:default!important}
+#customerManageModal .select2-selection{cursor:pointer!important}
 #tabTambahCustomer .select2-container .select2-selection--single{height:44px!important;border-radius:12px!important;border-color:#d7dee8!important;padding:7px 10px!important}
 #tabTambahCustomer .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:27px!important;font-size:12px!important}
 #tabTambahCustomer .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px!important}
-#customerMaps{cursor:default}
+#customerMaps{cursor:pointer}
 #customerTableWrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid #dfe8e2;border-radius:16px;background:#fff}
 #customerTable{width:100%;min-width:820px;border-collapse:separate;border-spacing:0;font-size:11px}
 #customerTable th{padding:10px 12px;text-align:left;background:#f3f8f4;color:#475569;border-bottom:1px solid #dfe8e2;white-space:nowrap;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-#customerTable td{padding:10px 12px;border-bottom:1px solid #edf2ef;color:#334155;background:#fff;white-space:nowrap;cursor:default}
+#customerTable td{padding:10px 12px;border-bottom:1px solid #edf2ef;color:#334155;background:#fff;white-space:nowrap;cursor:pointer}
 #customerTable tbody tr:hover td{background:#f8fafc}
 #customerTable th:nth-child(2),#customerTable td:nth-child(2){background:#fff;min-width:220px}
 #customerTable th:nth-child(2){z-index:7;background:#f3f8f4}
 #customerTable tbody tr:hover td:nth-child(2){background:#f8fafc}
 .customer-table-empty{text-align:center!important;padding:32px 12px!important;color:#94a3b8!important;cursor:default!important}
-.customer-action-btn{border:1px solid #dfe8e2;border-radius:9px;padding:6px 9px;font-size:10px;font-weight:800;cursor:default;background:#fff}
+.customer-action-btn{border:1px solid #dfe8e2;border-radius:9px;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer;background:#fff}
 @media(max-width:767px){#tabTambahCustomer{max-width:none}#tabTambahCustomer form{padding:12px}#customerTable{min-width:760px}}
 </style>
 
@@ -1217,71 +1284,6 @@ html,body{height:100%;}
 }
 </style>
 
-
-<style id="riwayat-card-view">
-.riwayat-card-list{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
-.riwayat-card{width:100%;max-width:710px;box-sizing:border-box;background:#fff;border:1px solid #d6e0e7;border-radius:17px;overflow:hidden;box-shadow:0 2px 8px rgba(15,42,27,.045);transition:.16s ease;cursor:default}
-.riwayat-card:hover{transform:translateY(-1px);border-color:#c6d5df;box-shadow:0 5px 14px rgba(15,42,27,.07)}
-.riwayat-card-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 17px 13px;background:#fff;border-bottom:1px solid #e7edf1}
-.riwayat-card-date-wrap{display:flex;align-items:center;gap:9px;min-width:0}
-.riwayat-card-number{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 6px;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:9px;font-weight:900}
-.riwayat-card-date{color:#8a9aae;font-size:10px;font-weight:700;white-space:nowrap}
-.riwayat-card-check{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:default}
-.riwayat-card-check input{width:18px;height:18px;accent-color:#059669;cursor:default}
-.riwayat-card-content{padding:0 17px}
-.riwayat-card-main{padding:0 0 13px}
-.riwayat-card-label{margin-bottom:5px;color:#94a3b8;font-size:8px;line-height:1;font-weight:900;letter-spacing:.11em}
-.riwayat-card-outlet{color:#0f172a;font-size:15px;line-height:1.25;font-weight:900;word-break:break-word}
-.riwayat-card-cust{margin-top:4px;color:#94a3b8;font-size:8px;font-weight:700}
-.riwayat-card-product-box{padding:13px 0 14px;border-top:1px solid #e7edf1;border-bottom:1px solid #e7edf1;background:#fff;margin:0}
-.riwayat-card-products{color:#334155;font-size:10px;line-height:1.7;font-weight:600}
-.riwayat-card-note-box{padding:12px 0 13px;border-bottom:1px solid #e7edf1;background:#fff}
-.riwayat-card-note{color:#475569;font-size:10px;line-height:1.55;font-weight:600;white-space:pre-wrap;word-break:break-word}
-.riwayat-product-separator{display:none}
-.riwayat-card-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 0 16px}
-.riwayat-card-info{min-width:0;padding:13px 12px;border-radius:11px;background:#f8fafc;border:0}
-.riwayat-card-info>span{display:block;margin-bottom:5px;color:#94a3b8;font-size:8px;font-weight:900;letter-spacing:.08em}
-.riwayat-card-info>strong{display:block;min-width:0;color:#334155;font-size:11px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.riwayat-card-status{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:31px;padding:5px 12px;border-radius:999px;font-size:9px!important;font-weight:900!important;border:1px solid transparent;white-space:nowrap}
-.riwayat-card-status:before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
-.riwayat-card-status.approve{color:#00865a!important;background:#ecfdf5;border-color:#a7f3d0}
-.riwayat-card-status.decline{color:#dc2626!important;background:#fef2f2;border-color:#fecaca}
-.riwayat-card-status.pending{color:#d97706!important;background:#fffbeb;border-color:#fde68a}
-.riwayat-card-status-select{width:auto;min-height:31px;padding:5px 9px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#334155;font-size:8px;font-weight:800}
-.riwayat-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 17px;border-top:0;background:#fff}
-.riwayat-card-id{min-width:0;color:#94a3b8;font-size:8px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.riwayat-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-shrink:0}
-.riwayat-card-btn{min-height:34px;padding:6px 13px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-size:9px;font-weight:900;cursor:default;transition:.16s ease;white-space:nowrap}
-.riwayat-card-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(15,23,42,.08)}
-.riwayat-card-btn.detail{color:#475569;border-color:#dbe2e8}.riwayat-card-btn.edit{color:#fff;border-color:#2563eb;background:#2563eb}.riwayat-card-btn.whatsapp{color:#fff;border-color:#059669;background:#059669}.riwayat-card-btn.delete{color:#94a3b8;border-color:#fecdd3;background:#fff1f2}
-.riwayat-card-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:9px 10px;border:1px solid #e0e9e3;border-radius:13px;background:#fff}
-.riwayat-card-toolbar-left{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.riwayat-select-all{display:flex;align-items:center;gap:6px;color:#475569;font-size:9px;font-weight:800;cursor:default}.riwayat-select-all input{width:15px;height:15px;accent-color:#059669}
-.riwayat-selected-badge{padding:4px 8px;border-radius:999px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;font-size:8px;font-weight:800}
-.riwayat-delete-selected{min-height:29px;padding:6px 10px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:8px;font-weight:900;cursor:default}.riwayat-delete-selected:disabled{opacity:.45;cursor:not-allowed}
-.riwayat-admin-status-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
-.riwayat-admin-status-toolbar>span{color:#64748b;font-size:8px;font-weight:700}.riwayat-admin-btn{min-height:27px;padding:5px 10px;border-radius:7px;font-size:8px;font-weight:900;cursor:default}.riwayat-admin-btn.reset{color:#475569;background:#fff;border:1px solid #cbd5e1}.riwayat-admin-btn.done{color:#fff;background:#0f172a;border:1px solid #0f172a}
-.riwayat-card-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding:9px 3px;color:#64748b;font-size:9px}.riwayat-pagination-buttons{display:flex;align-items:center;gap:5px}.riwayat-pagination-buttons button{min-width:29px;min-height:28px;border:1px solid #dbe3df;border-radius:7px;background:#fff;color:#475569;font-weight:900;cursor:default}.riwayat-pagination-buttons button:disabled{opacity:.4;cursor:not-allowed}
-@media (max-width:600px){
- .riwayat-card{max-width:none;border-radius:15px}
- .riwayat-card-header{padding:13px 15px 11px}.riwayat-card-content{padding:0 15px}.riwayat-card-footer{padding:9px 15px}
- .riwayat-card-outlet{font-size:14px}.riwayat-card-info{padding:12px 11px}.riwayat-card-btn{padding:6px 11px}
- .riwayat-card-toolbar{align-items:stretch}.riwayat-card-toolbar-left{width:100%}.riwayat-delete-selected{width:100%}.riwayat-card-pagination{align-items:flex-start;flex-direction:column}
-}
-@media (max-width:380px){.riwayat-card-info{padding:10px}.riwayat-card-btn{padding:5px 8px;font-size:8px}}
-</style>
-
-
-<style id="mobile-bottom-scroll-fix">
-@media (max-width:767px){
- html,body{height:100%;min-height:100%;overflow:hidden!important}
- #app.app-shell{height:100dvh!important;min-height:0!important;max-height:100dvh!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
- #app>.p-4.flex-1.overflow-y-auto{flex:1 1 auto!important;min-height:0!important;height:auto!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto;padding-bottom:calc(80px + env(safe-area-inset-bottom))!important;scroll-padding-bottom:calc(80px + env(safe-area-inset-bottom))}
- #mainPage{padding-bottom:20px!important}
- #loginPage,#registerPage{padding-bottom:calc(40px + env(safe-area-inset-bottom))!important}
-}
-</style>
-
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -1444,9 +1446,10 @@ html,body{height:100%;}
                         </div>
 
                         <div class="p-4 space-y-3">
-                            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                                <div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">OUTLET</div>
-                                <div id="customerInputOutlet" class="mt-1 text-sm font-extrabold text-slate-800">-</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">CUST.CODE</div><div id="customerInputCustCode" class="mt-1 text-sm font-extrabold text-slate-800">-</div></div>
+                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">OUTLET</div><div id="customerInputOutlet" class="mt-1 text-xs font-bold text-slate-700">-</div></div>
+                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">CHANNEL</div><div id="customerInputChannel" class="mt-1 text-xs font-bold text-slate-700">-</div></div>
                             </div>
 
                             <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
@@ -1467,14 +1470,9 @@ html,body{height:100%;}
                                 </div>
                             </div>
 
-                            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                <label for="inputNote" class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Note</label>
-                                <textarea id="inputNote" rows="3" placeholder="Tambahkan catatan order (opsional)..." class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs resize-y focus:outline-none focus:ring-2 focus:ring-emerald-200"></textarea>
-                            </div>
-
                         </div>
                     </div>
-                    <input type="hidden" id="inputOutlet"><input type="hidden" id="inputCustCode"><input type="hidden" id="inputChannel"><input type="hidden" id="inputTanggal"><input type="hidden" id="inputPayment" value="CASH"><input type="hidden" id="inputDisc" value="0%"><select id="cashbackSelect" class="hidden"><option value=""></option></select>
+                    <input type="hidden" id="inputOutlet"><input type="hidden" id="inputCustCode"><input type="hidden" id="inputChannel"><input type="hidden" id="inputTanggal"><input type="hidden" id="inputPayment" value="CASH"><input type="hidden" id="inputDisc" value="0%"><input type="hidden" id="inputNote" value="-"><select id="cashbackSelect" class="hidden"><option value=""></option></select>
                 </div>
 
                 <div id="tabTambahCustomer" class="tab-content hidden space-y-4">
@@ -1930,15 +1928,11 @@ html,body{height:100%;}
                 const adminTools = document.getElementById('riwayatAdminTools');
                 if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
 
-                if (isAdminLogin) {
-                    clearAuthState();
-                    document.getElementById('mainPage').classList.add('hidden');
-                    document.getElementById('mainHeader').classList.add('hidden');
-                    document.getElementById('leftNav').classList.add('hidden');
-                    document.getElementById('loginPage').classList.remove('hidden');
-                    return false;
-                }
-                bootstrapSession(false);
+                if (!isAdminLogin) loadCustomerContext(currentUser);
+                else loadPencapaianSalesFilter();
+                loadRiwayat(true, true);
+                if (!isAdminLogin) loadInputMasterData();
+                if (isAdminLogin) switchTab('riwayat');
                 return true;
             } catch (e) {
                 console.warn("Sesi lokal tidak valid:", e);
@@ -1964,68 +1958,13 @@ html,body{height:100%;}
             showLoading(false);
             // Produk/Cashback tidak lagi dimuat saat halaman pertama dibuka.
             // Keduanya dimuat hanya setelah login Sales atau saat tab Input dibuka.
+            if (restored && String(currentUsernameInput || '').toLowerCase() !== 'admin') {
+                loadInputMasterData();
+            }
             setTanggalTambahCustomer();
             previewCustCode();
             startAutoRefresh();
         };
-
-        function applyInputMasterLists(products, cashbackList) {
-            produkDataList = Array.isArray(products) ? products : [];
-            let select = $('#addItemProduk');
-            if (select && select.length) {
-                select.empty().append('<option value="">-- Pilih Produk --</option>');
-                produkDataList.forEach(function(p){
-                    select.append(new Option(p.nama + " (" + p.liter + "L | Rp " + Number(p.harga).toLocaleString('id-ID') + ")", p.nama));
-                });
-                refreshSelect2('#addItemProduk');
-            }
-            let selectCB = $('#cashbackSelect');
-            if (selectCB && selectCB.length) {
-                selectCB.empty().append('<option value="">-- Pilih Cashback --</option>');
-                (Array.isArray(cashbackList) ? cashbackList : []).forEach(function(cb){ selectCB.append(new Option(cb, cb)); });
-                refreshSelect2('#cashbackSelect');
-            }
-            inputMasterLoading=false;
-            inputMasterLoaded=true;
-        }
-
-        function applyInitialRiwayat(data) {
-            globalRiwayatData = Array.isArray(data) ? data : [];
-            riwayatLoading=false;
-            if (currentUsernameInput && currentUsernameInput.toLowerCase() === 'admin') populateRiwayatDsrFilter();
-            populateRiwayatYearFilter(globalRiwayatData);
-            filterRiwayat();
-        }
-
-        function bootstrapSession(showErrors) {
-            showLoading(true);
-            google.script.run.withSuccessHandler(function(bundle){
-                if (!bundle || !bundle.success) {
-                    showLoading(false);
-                    clearAuthState();
-                    document.getElementById('mainPage').classList.add('hidden');
-                    document.getElementById('mainHeader').classList.add('hidden');
-                    document.getElementById('leftNav').classList.add('hidden');
-                    document.getElementById('loginPage').classList.remove('hidden');
-                    if (showErrors) showModal('Login Gagal', bundle && bundle.message ? bundle.message : 'Sesi tidak valid.');
-                    return;
-                }
-                currentUser = bundle.custCode || currentUsernameInput;
-                document.getElementById('inputOutlet').value = bundle.outlet || '';
-                document.getElementById('inputCustCode').value = bundle.custCode || currentUser;
-                document.getElementById('inputChannel').value = bundle.channel || '';
-                document.getElementById('inputTanggal').value = new Date().toISOString().slice(0,10);
-                const oo=document.getElementById('customerInputOutlet'); if(oo) oo.textContent=bundle.outlet || '-';
-                applyInputMasterLists(bundle.products, bundle.cashback);
-                applyInitialRiwayat(bundle.riwayat);
-                saveAuthState();
-                showLoading(false);
-            }).withFailureHandler(function(err){
-                showLoading(false);
-                clearAuthState();
-                if (showErrors) showModal('Gagal memuat aplikasi', err && err.message ? err.message : 'Terjadi kesalahan saat memuat data.');
-            }).bootstrapApp(currentUsernameInput);
-        }
 
         let inputMasterLoading = false;
         let inputMasterLoaded = false;
@@ -2107,17 +2046,11 @@ html,body{height:100%;}
                     const adminTools = document.getElementById('riwayatAdminTools');
                     if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
                     saveAuthState();
-                    if (isAdminLogin) {
-                        showLoading(false);
-                        showModal('Login Gagal','Login dengan username ADMIN tidak diperbolehkan.');
-                        clearAuthState();
-                        document.getElementById('mainPage').classList.add('hidden');
-                        document.getElementById('mainHeader').classList.add('hidden');
-                        document.getElementById('leftNav').classList.add('hidden');
-                        document.getElementById('loginPage').classList.remove('hidden');
-                        return;
-                    }
-                    bootstrapSession(false);
+                    if (!isAdminLogin) loadCustomerContext(currentUser);
+                    else loadPencapaianSalesFilter();
+                    loadRiwayat(true, true);
+                    if (!isAdminLogin) loadInputMasterData();
+                    if (isAdminLogin) switchTab('riwayat');
                 } else {
                     showModal("Login Gagal", res.message);
                 }
@@ -2306,7 +2239,7 @@ html,body{height:100%;}
                 tanggal: document.getElementById('inputTanggal').value || new Date().toISOString().slice(0,10),
                 payment: 'CASH',
                 disc: '0%',
-                note: (document.getElementById('inputNote') ? document.getElementById('inputNote').value.trim() : '') || '-',
+                note: '-',
                 cashback: '',
                 items: shoppingCart
             };
@@ -2369,7 +2302,7 @@ html,body{height:100%;}
             const countBadge = document.getElementById('riwayatCount');
 
             if (!Array.isArray(data)) data = [];
-            if (countBadge) countBadge.textContent = `${data.length} transaksi`;
+            countBadge.textContent = `${data.length} transaksi`;
 
             if (data.length === 0) {
                 container.innerHTML = `
@@ -2379,127 +2312,128 @@ html,body{height:100%;}
                 return;
             }
 
-            const isAdmin = currentUsernameInput && currentUsernameInput.toLowerCase() === 'admin';
+            const isAdmin = currentUsernameInput &&
+                currentUsernameInput.toLowerCase() === 'admin';
             const totalPages = isAdmin ? Math.max(1, Math.ceil(data.length / RIWAYAT_PAGE_SIZE)) : 1;
             if (riwayatPage > totalPages) riwayatPage = totalPages;
-
             const startIndex = isAdmin ? (riwayatPage - 1) * RIWAYAT_PAGE_SIZE : 0;
             const visibleData = isAdmin ? data.slice(startIndex, startIndex + RIWAYAT_PAGE_SIZE) : data;
 
-            const cards = visibleData.map(function(item, index) {
-                const id = String(item.id || '').trim();
+            let rows = "";
+
+            visibleData.forEach((item, index) => {
                 const status = String(item.status || 'PENDING').toUpperCase();
+
                 const statusClass = status === 'APPROVE'
-                    ? 'riwayat-card-status approve'
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                     : status === 'DECLINE'
-                        ? 'riwayat-card-status decline'
-                        : 'riwayat-card-status pending';
+                        ? 'text-red-700 bg-red-50 border-red-200'
+                        : 'text-amber-700 bg-amber-50 border-amber-200';
 
                 const products = Array.isArray(item.products)
-                    ? item.products.filter(function(p){ return String(p || '').trim() !== ''; })
+                    ? item.products.filter(p => String(p || '').trim() !== '')
                     : [];
+
                 const productText = products.length
-                    ? products.map(function(p){ return escapeHtml(p); }).join('<br>')
+                    ? products.map(p => escapeHtml(p)).join('<br>')
                     : '-';
 
-                const statusControl = isAdmin ? `
-                    <select onclick="event.stopPropagation()" onchange="updateBulkStatusInfo()"
-                        class="bulk-status-select riwayat-card-status-select"
-                        data-order-id="${escapeHtml(id)}"
+                const statusCell = isAdmin ? `
+                    <select
+                        onclick="event.stopPropagation()" class="bulk-status-select w-full min-w-[120px] border border-slate-300 rounded-md px-2 py-1.5 text-[9px] font-bold bg-white"
+                        data-order-id="${escapeHtml(item.id)}"
                         data-current-status="${escapeHtml(status)}">
                         <option value="">${escapeHtml(status)} / TIDAK DIUBAH</option>
                         <option value="APPROVE">APPROVE</option>
                         <option value="DECLINE">DECLINE</option>
                     </select>
-                ` : `<span class="${statusClass}">${escapeHtml(status)}</span>`;
+                ` : `
+                    <span class="inline-flex justify-center items-center px-2 py-1 rounded-full border text-[9px] font-extrabold ${statusClass}">
+                        ${escapeHtml(status)}
+                    </span>`;
 
-                return `
-                    <article class="riwayat-card" data-order-id="${escapeHtml(id)}">
-                        <div class="riwayat-card-header">
-                            <div class="riwayat-card-date-wrap">
-                                <label class="riwayat-card-check" title="Pilih transaksi" onclick="event.stopPropagation()">
-                                    <input type="checkbox" class="riwayat-select-checkbox"
-                                        data-order-id="${escapeHtml(id)}"
-                                        ${selectedRiwayatIds[id] ? 'checked' : ''}
-                                        onclick="event.stopPropagation()"
-                                        onchange="toggleRiwayatSelection(this)">
-                                </label>
-                                <span class="riwayat-card-number">#${startIndex + index + 1}</span>
-                                <span class="riwayat-card-date">${escapeHtml(item.tanggal || '-')}</span>
+                rows += `
+                    <tr class="riwayat-row hover:bg-emerald-50/40 transition align-top cursor-pointer" onclick="lihatDetail('${escapeHtml(item.id)}')">
+                        <td class="p-2.5 text-center">
+                            <input type="checkbox" class="riwayat-select-checkbox w-3.5 h-3.5 accent-emerald-600 cursor-pointer"
+                                data-order-id="${escapeHtml(item.id)}"
+                                ${selectedRiwayatIds[String(item.id)] ? 'checked' : ''}
+                                onclick="event.stopPropagation()" onchange="toggleRiwayatSelection(this)">
+                        </td>
+                        <td class="p-2.5 text-center text-slate-400 font-semibold">${startIndex + index + 1}</td>
+                        <td class="p-2.5 whitespace-nowrap text-slate-600">${escapeHtml(item.tanggal || '-')}</td>
+                        <td class="p-2.5">
+                            <div class="font-bold text-slate-800 min-w-[130px]">${escapeHtml(item.outlet || '-')}</div>
+                            ${isAdmin ? `<div class="text-[9px] text-slate-400 mt-1">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
+                        </td>
+                        <td class="p-2.5">
+                            <div class="text-[10px] leading-5 text-slate-600 min-w-[180px]">${productText}</div>
+                        </td>
+                        <td class="p-2.5 text-right whitespace-nowrap font-semibold text-slate-700">${escapeHtml(item.volume || '0')} L</td>
+                        <td class="p-2.5 text-right whitespace-nowrap font-semibold text-slate-700">Rp ${Number(item.value || 0).toLocaleString('id-ID')}</td>
+                        <td class="p-2.5">${statusCell}</td>
+                        <td class="p-2.5">
+                            <div class="flex items-center gap-1.5 min-w-[100px]">
+                                <button type="button"
+                                    onclick="event.stopPropagation(); editRiwayat('${escapeHtml(item.id)}'); return false;"
+                                    style="display:inline-flex !important;align-items:center;justify-content:center;min-width:48px !important;visibility:visible !important;opacity:1 !important;"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2.5 rounded-md font-bold text-[9px] border border-blue-700 transition"
+                                    title="Edit order">✏️ EDIT</button>
+                                <button type="button"
+                                    onclick="event.stopPropagation(); kirimUlangWA('${escapeHtml(item.id)}')"
+                                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2.5 rounded-md font-semibold text-[9px] transition"
+                                    title="Kirim ulang WhatsApp">💬 WA</button>
+                                <button type="button"
+                                    onclick="event.stopPropagation(); hapusRiwayat('${escapeHtml(item.id)}')"
+                                    class="bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-2.5 rounded-md font-medium border border-red-200/60 transition"
+                                    title="Hapus">🗑️</button>
                             </div>
-                            <div onclick="event.stopPropagation()">${statusControl}</div>
-                        </div>
+                        </td>
+                    </tr>`;
+            });
 
-                        <div class="riwayat-card-content">
-                            <div class="riwayat-card-main">
-                                <div class="riwayat-card-outlet">${escapeHtml(item.outlet || '-')}</div>
-                                ${isAdmin ? `<div class="riwayat-card-cust">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
-                            </div>
+            const bulkControls = isAdmin ? `
+                <div class="flex flex-wrap items-center gap-2 p-3 bg-slate-50 border-b border-slate-200">
+                    <button type="button" onclick="resetPilihanStatusRiwayat()"
+                        class="px-3 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                        RESET
+                    </button>
+                    <button type="button" onclick="doneBulkStatusRiwayat()"
+                        class="px-4 py-1.5 rounded-md bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-extrabold shadow-sm">
+                        DONE
+                    </button>
+                    <span id="bulkStatusInfo" class="text-[10px] text-slate-500 font-semibold ml-auto">
+                        Pilih status pada masing-masing baris lalu klik DONE.
+                    </span>
+                </div>` : '';
 
-                            <div class="riwayat-card-product-box">
-                                <div class="riwayat-card-label">PRODUK</div>
-                                <div class="riwayat-card-products">${productText}</div>
-                            </div>
-
-                            <div class="riwayat-card-note-box">
-                                <div class="riwayat-card-label">NOTE</div>
-                                <div class="riwayat-card-note">${escapeHtml(item.note || '-')}</div>
-                            </div>
-
-                            <div class="riwayat-card-info-grid">
-                                <div class="riwayat-card-info">
-                                    <span>VOLUME</span>
-                                    <strong>${escapeHtml(item.volume || '0')} L</strong>
-                                </div>
-                                <div class="riwayat-card-info">
-                                    <span>NILAI</span>
-                                    <strong>Rp ${Number(item.value || 0).toLocaleString('id-ID')}</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="riwayat-card-footer" onclick="event.stopPropagation()">
-                            <span class="riwayat-card-id">ID: ${escapeHtml(id || '-')}</span>
-                            <div class="riwayat-card-actions">
-                                <button type="button" onclick="editRiwayat('${escapeHtml(id)}')" class="riwayat-card-btn edit">✏️ EDIT</button>
-                                <button type="button" onclick="kirimUlangWA('${escapeHtml(id)}')" class="riwayat-card-btn whatsapp">💬 WA</button>
-                                <button type="button" onclick="hapusRiwayat('${escapeHtml(id)}')" class="riwayat-card-btn delete">🗑️</button>
-                            </div>
-                        </div>
-                    </article>`;
-            }).join('');
-
-            const bulkControls = `
-                <div class="riwayat-card-toolbar">
-                    <div class="riwayat-card-toolbar-left">
-                        <label class="riwayat-select-all">
-                            <input type="checkbox" id="selectAllRiwayatVisible"
-                                onclick="toggleSelectAllRiwayatVisible(true)" class="riwayat-select-checkbox">
-                            <span>Pilih semua</span>
-                        </label>
-                        <span class="riwayat-selected-badge"><span id="selectedRiwayatCount">0</span> dipilih</span>
+            container.innerHTML = `
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    ${bulkControls}
+                    <div class="riwayat-table-wrap">
+                        <table class="riwayat-table w-full text-left border-collapse text-[10px] ${!isAdmin ? 'riwayat-sales-table' : ''}" style="min-width: 1090px;">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                    <th class="p-2.5 font-bold text-center whitespace-nowrap w-10">
+                                        <input type="checkbox" id="selectAllRiwayatVisible" onclick="toggleSelectAllRiwayatVisible(true)"
+                                            class="w-3.5 h-3.5 accent-emerald-600 cursor-pointer" title="Pilih semua yang tampil">
+                                    </th>
+                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">No</th>
+                                    
+                                    <th class="p-2.5 font-bold whitespace-nowrap">Tanggal</th>
+                                    <th class="p-2.5 font-bold whitespace-nowrap">Outlet</th>
+                                    <th class="p-2.5 font-bold whitespace-nowrap">Produk</th>
+                                    <th class="p-2.5 font-bold text-right whitespace-nowrap">Volume</th>
+                                    <th class="p-2.5 font-bold text-right whitespace-nowrap">Nilai</th>
+                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">Status</th>
+                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
                     </div>
-                    <button type="button" id="btnHapusRiwayatTerpilih" onclick="hapusRiwayatTerpilih()" disabled class="riwayat-delete-selected">🗑️ HAPUS TERPILIH</button>
+                    ${isAdmin && totalPages > 1 ? `<div class="flex items-center justify-between gap-2 px-3 py-2 border-t border-slate-200 bg-slate-50 text-[10px]"><span class="text-slate-500">Menampilkan ${startIndex + 1}-${Math.min(startIndex + RIWAYAT_PAGE_SIZE, data.length)} dari ${data.length} transaksi</span><div class="flex items-center gap-1"><button type="button" onclick="changeRiwayatPage(-1)" class="px-2 py-1 rounded border bg-white ${riwayatPage <= 1 ? 'opacity-40 cursor-not-allowed' : ''}" ${riwayatPage <= 1 ? 'disabled' : ''}>‹</button><span class="px-2 font-bold">Halaman ${riwayatPage}/${totalPages}</span><button type="button" onclick="changeRiwayatPage(1)" class="px-2 py-1 rounded border bg-white ${riwayatPage >= totalPages ? 'opacity-40 cursor-not-allowed' : ''}" ${riwayatPage >= totalPages ? 'disabled' : ''}>›</button></div></div>` : ''}
                 </div>`;
-
-            const adminStatusControls = isAdmin ? `
-                <div class="riwayat-admin-status-toolbar">
-                    <button type="button" onclick="resetPilihanStatusRiwayat()" class="riwayat-admin-btn reset">RESET</button>
-                    <button type="button" onclick="doneBulkStatusRiwayat()" class="riwayat-admin-btn done">DONE</button>
-                    <span id="bulkStatusInfo">Pilih status pada masing-masing transaksi lalu klik DONE.</span>
-                </div>` : '';
-
-            const pagination = isAdmin && totalPages > 1 ? `
-                <div class="riwayat-card-pagination">
-                    <span>Menampilkan ${startIndex + 1}-${Math.min(startIndex + RIWAYAT_PAGE_SIZE, data.length)} dari ${data.length} transaksi</span>
-                    <div class="riwayat-pagination-buttons">
-                        <button type="button" onclick="changeRiwayatPage(-1)" ${riwayatPage <= 1 ? 'disabled' : ''}>‹</button>
-                        <strong>${riwayatPage}/${totalPages}</strong>
-                        <button type="button" onclick="changeRiwayatPage(1)" ${riwayatPage >= totalPages ? 'disabled' : ''}>›</button>
-                    </div>
-                </div>` : '';
-
-            container.innerHTML = `${bulkControls}${adminStatusControls}<div class="riwayat-card-list">${cards}</div>${pagination}`;
             updateSelectedRiwayatUI();
         }
 
@@ -2981,11 +2915,6 @@ html,body{height:100%;}
                                 <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Value</div>
                                 <div class="text-[12px] font-extrabold text-slate-800 mt-1">${formatRupiah(value)}</div>
                             </div>
-                        </div>
-
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 mb-3">
-                            <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Note</div>
-                            <div class="text-[12px] font-semibold text-slate-700 mt-1 whitespace-pre-wrap break-words">${escapeHtml(orderInfo.note || '-')}</div>
                         </div>
 
                         <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Rincian Produk Terbeli</div>
@@ -4243,12 +4172,12 @@ html,body{height:100%;}
             // 3. Monitoring
             // 4. Pencapaian Sales
             if (activeTab === 'tabMonitoring') return;
-            if (activeTab === 'tabRiwayat') loadRiwayat(false, true);
+            if (activeTab === 'tabRiwayat') loadRiwayat(true, true);
         }
 
         function startAutoRefresh() {
             if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-            autoRefreshTimer = setInterval(autoRefreshActiveTab, 60000);
+            autoRefreshTimer = setInterval(autoRefreshActiveTab, 5000);
         }
 
         function switchTab(tab) {
