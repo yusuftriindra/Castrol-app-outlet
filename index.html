@@ -5,130 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Castrol</title>
     <script src="https://cdn.tailwindcss.com"></script>
-<script>
-// ===== CASTROL GITHUB -> GOOGLE APPS SCRIPT BRIDGE =====
-// Backend Web App URL sudah dipasang langsung.
-window.CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
-
-(function () {
-    'use strict';
-
-    var bridgeFrame = null;
-    var bridgeReady = false;
-    var bridgeQueue = [];
-    var pending = {};
-    var seq = 0;
-    var timeoutMs = 45000;
-
-    function ensureBridge() {
-        if (bridgeFrame) return bridgeFrame;
-        bridgeFrame = document.createElement('iframe');
-        bridgeFrame.id = 'castrolApiBridge';
-        bridgeFrame.title = 'Castrol API Bridge';
-        bridgeFrame.setAttribute('aria-hidden', 'true');
-        bridgeFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
-        bridgeFrame.src = window.CASTROL_API_URL + (window.CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?') + 'bridge=1';
-        (document.body || document.documentElement).appendChild(bridgeFrame);
-        return bridgeFrame;
-    }
-
-    function rejectPending(id, message) {
-        var item = pending[id];
-        if (!item) return;
-        delete pending[id];
-        clearTimeout(item.timer);
-        if (typeof item.failure === 'function') item.failure({ message: message });
-    }
-
-    function send(item) {
-        if (!bridgeFrame || !bridgeReady) {
-            bridgeQueue.push(item);
-            ensureBridge();
-            return;
-        }
-        try {
-            bridgeFrame.contentWindow.postMessage({
-                source: 'castrol-github',
-                requestId: item.id,
-                method: item.method,
-                args: item.args
-            }, '*');
-        } catch (e) {
-            rejectPending(item.id, e.message || String(e));
-        }
-    }
-
-    function apiCall(method, args, success, failure) {
-        ensureBridge();
-        var id = 'castrol_' + Date.now() + '_' + (++seq);
-        var item = { id:id, method:method, args:Array.isArray(args) ? args : [], success:success, failure:failure };
-        item.timer = setTimeout(function () {
-            rejectPending(id, 'Koneksi ke server timeout. Pastikan Web App Apps Script masih aktif dan dapat diakses.');
-        }, timeoutMs);
-        pending[id] = item;
-        send(item);
-    }
-
-    window.addEventListener('message', function (event) {
-        var data = event.data || {};
-        if (data.source !== 'castrol-apps-script') return;
-
-        if (data.type === 'ready') {
-            bridgeReady = true;
-            var queue = bridgeQueue.splice(0);
-            queue.forEach(send);
-            return;
-        }
-
-        if (!data.requestId || !pending[data.requestId]) return;
-        var item = pending[data.requestId];
-        delete pending[data.requestId];
-        clearTimeout(item.timer);
-
-        if (data.ok) {
-            if (typeof item.success === 'function') item.success(data.result);
-        } else {
-            if (typeof item.failure === 'function') item.failure({ message: data.error || 'Terjadi kesalahan pada server.' });
-        }
-    });
-
-    function makeRunner(successHandler, failureHandler) {
-        return new Proxy({}, {
-            get: function (target, prop) {
-                if (prop === 'withSuccessHandler') {
-                    return function (fn) { return makeRunner(typeof fn === 'function' ? fn : null, failureHandler); };
-                }
-                if (prop === 'withFailureHandler') {
-                    return function (fn) { return makeRunner(successHandler, typeof fn === 'function' ? fn : null); };
-                }
-                if (prop === 'withUserObject') {
-                    return function () { return makeRunner(successHandler, failureHandler); };
-                }
-                if (prop === 'then' || prop === 'catch' || prop === 'finally') return undefined;
-
-                return function () {
-                    var args = Array.prototype.slice.call(arguments);
-                    apiCall(String(prop), args, successHandler, failureHandler);
-                    return makeRunner(successHandler, failureHandler);
-                };
-            }
-        });
-    }
-
-    // Kompatibilitas: seluruh pemanggilan google.script.run lama tetap dapat dipakai.
-    window.google = window.google || {};
-    window.google.script = window.google.script || {};
-    window.google.script.run = makeRunner(null, null);
-
-    // Buat bridge setelah DOM tersedia.
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', ensureBridge);
-    } else {
-        ensureBridge();
-    }
-})();
-</script>
-
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -642,6 +518,59 @@ window.CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweq
 
         .riwayat-select-checkbox{vertical-align:middle;}
         #riwayatBulkDeleteTools{position:sticky;top:0;z-index:5;}
+        #btnHapusRiwayatTerpilih:disabled{opacity:.45;cursor:not-allowed;}
+        .riwayat-bulk-fast{font-size:10px;color:#64748b;}
+
+/* Sistem hanya menampilkan Input, Riwayat, dan Monitoring. */
+#tabTambahCustomer,#tabPencapaian,#tabOutletKontrak,#tabOutletBWS,#tabPricelist{display:none!important}
+
+.monitoring-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.monitoring-outlet-card{background:#fff;border:1px solid #dbe7df;border-radius:18px;box-shadow:0 5px 18px rgba(15,42,27,.06);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:pointer}
+.monitoring-outlet-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(15,42,27,.10);border-color:#a8d2b8}
+.monitoring-card-head{padding:14px 15px 11px;background:linear-gradient(135deg,#f7fbf8,#edf7f0);border-bottom:1px solid #e4eee7}
+.monitoring-card-kicker{font-size:8px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#5f8a6e}
+.monitoring-card-title{font-size:14px;font-weight:900;color:#1f2937;line-height:1.25;margin-top:3px}
+.monitoring-card-sub{font-size:9px;color:#789084;margin-top:4px}
+.monitoring-card-body{padding:12px 14px 14px}
+.monitoring-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.monitoring-kpi{border:1px solid #e5ebe7;border-radius:12px;padding:9px;background:#fff}
+.monitoring-kpi-label{font-size:8px;color:#8a9890;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.monitoring-kpi-value{font-size:14px;font-weight:900;color:#26332b;margin-top:3px;white-space:nowrap}
+.monitoring-kpi-value.main{color:#008b49}
+.monitoring-kpi-value.point{color:#4f46a5}
+.monitoring-progress{height:7px;border-radius:999px;background:#edf1ee;overflow:hidden}
+.monitoring-progress>div{height:100%;border-radius:999px}
+.monitoring-month-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.monitoring-month{border-radius:10px;background:#f8faf9;border:1px solid #e7ece8;padding:7px}
+.monitoring-month-label{font-size:7px;font-weight:800;color:#8b9890;text-transform:uppercase}
+.monitoring-month-value{font-size:11px;font-weight:900;color:#44534a;margin-top:2px}
+.monitoring-point-box{margin-top:12px;border:1px solid #cfc9f5;background:linear-gradient(180deg,#fbfaff 0%,#f5f3ff 100%);border-radius:15px;padding:12px}
+.monitoring-point-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:9px;border-bottom:1px solid #e2def8}
+.monitoring-point-title{font-size:11px;font-weight:950;color:#4338a3;text-transform:uppercase;letter-spacing:.07em}
+.monitoring-point-subtitle{font-size:9px;color:#7069a6;margin-top:3px;line-height:1.45}
+.monitoring-point-total-wrap{text-align:right;min-width:105px}
+.monitoring-point-total-label{font-size:8px;font-weight:800;color:#8179b5;text-transform:uppercase;letter-spacing:.06em}
+.monitoring-point-total{font-size:22px;line-height:1.1;font-weight:950;color:#3730a3;margin-top:2px}
+.monitoring-point-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}
+.monitoring-point-metric{background:#fff;border:1px solid #e5e1f8;border-radius:10px;padding:8px}
+.monitoring-point-metric-label{font-size:8px;font-weight:800;color:#7b8490;text-transform:uppercase;letter-spacing:.04em}
+.monitoring-point-metric-value{font-size:12px;font-weight:900;color:#293241;margin-top:2px}
+.monitoring-category-title{font-size:9px;font-weight:900;color:#4c468d;text-transform:uppercase;letter-spacing:.05em;margin-top:11px;margin-bottom:5px}
+.monitoring-category-row{display:grid;grid-template-columns:minmax(80px,1.25fr) .9fr .9fr .7fr 1fr;align-items:center;gap:6px;padding:8px 7px;border-top:1px solid #e5e2f6;font-size:8px;color:#59665e}
+.monitoring-category-row:first-of-type{border-top:0}
+.monitoring-category-row .cat-name{font-size:9px;font-weight:900;color:#374151}
+.monitoring-category-row .cat-number{text-align:right;color:#64748b}
+.monitoring-category-row .cat-rate{text-align:right;color:#6b7280}
+.monitoring-category-row strong{color:#4338a3;font-size:10px;text-align:right}
+.monitoring-category-header{display:grid;grid-template-columns:minmax(80px,1.25fr) .9fr .9fr .7fr 1fr;gap:6px;padding:5px 7px;border-radius:8px;background:#eeecfb;color:#7a74a5;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.monitoring-point-formula{margin-top:8px;padding:7px 8px;border-radius:9px;background:#efefff;border:1px dashed #c9c5f2;color:#68629b;font-size:8px;line-height:1.5}
+@media(max-width:520px){.monitoring-point-head{align-items:flex-start}.monitoring-point-total{font-size:18px}.monitoring-category-row,.monitoring-category-header{grid-template-columns:1.2fr .9fr .9fr .7fr 1fr;font-size:7px}}
+.monitoring-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.monitoring-summary-card{border:1px solid #e0e9e3;border-radius:14px;background:#fff;padding:11px 12px}
+.monitoring-summary-label{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#829087;font-weight:800}
+.monitoring-summary-value{font-size:17px;font-weight:900;color:#243128;margin-top:3px}
+@media(max-width:640px){.monitoring-card-grid{grid-template-columns:1fr}.monitoring-summary{grid-template-columns:1fr}.monitoring-kpi-value{font-size:13px}}
+
 </style>
 
 <style>
@@ -671,14 +600,14 @@ body{background:var(--ui-bg)!important;color:var(--ui-text);font-family:Inter,ui
 button,input,select,textarea{font:inherit}
 button{touch-action:manipulation}
 #app.app-shell{width:100%;max-width:1440px;margin:0 auto;min-height:100vh;background:var(--ui-bg)!important;box-shadow:none!important;overflow:hidden;position:relative}
-#mainHeader{position:sticky!important;top:0;z-index:60;min-height:62px;padding:10px 16px!important;box-shadow:0 6px 24px rgba(15,23,42,.12)!important}
+#mainHeader{position:relative!important;top:auto;z-index:60;min-height:62px;padding:10px 16px!important;box-shadow:0 6px 24px rgba(15,23,42,.12)!important}
 #leftNav.app-sidebar{z-index:55;box-shadow:8px 0 28px rgba(15,23,42,.06)!important}
 #app>.p-4.flex-1.overflow-y-auto{min-width:0;width:100%;overflow-x:hidden!important}
 #mainPage{width:100%;max-width:1180px;margin:0 auto}
 #mainPage .tab-content{animation:uiFadeIn .2s ease-out}
 @keyframes uiFadeIn{from{opacity:.7;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 #tabInput .bg-slate-50{background:#fff!important;border-color:var(--ui-border)!important}
-#tabInput input,#tabInput select,#tabInput textarea,#searchRiwayatInput,#searchMonitoringInput,#searchOutletKontrakInput,#filterQuarterSelect,#filterPricelistUpdate{min-height:44px;border-radius:12px!important;border-color:#d7dee8!important}
+#tabInput input,#tabInput select,#tabInput textarea,#searchRiwayatInput,#searchOutletKontrakInput,#filterQuarterSelect,#filterPricelistUpdate{min-height:44px;border-radius:12px!important;border-color:#d7dee8!important}
 #btnKirimOrder{min-height:46px;border-radius:12px!important}
 #cartList{max-height:340px;overflow:auto}
 #listRiwayat>div{border-color:var(--ui-border)!important;border-radius:16px!important}
@@ -852,12 +781,12 @@ body{
 #tabPricelist .bg-white{
   box-shadow:0 8px 22px rgba(18,60,35,.045)!important;
 }
-#tabInput input,#tabInput select,#tabInput textarea,#searchRiwayatInput,#searchMonitoringInput,#searchOutletKontrakInput,#filterQuarterSelect,#filterPricelistUpdate{
+#tabInput input,#tabInput select,#tabInput textarea,#searchRiwayatInput,#searchOutletKontrakInput,#filterQuarterSelect,#filterPricelistUpdate{
   border-color:#d6e2da!important;background:#fff!important;
   box-shadow:inset 0 1px 2px rgba(15,40,24,.03),0 1px 2px rgba(15,40,24,.02)!important;
   transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease!important;
 }
-#tabInput input:focus,#tabInput select:focus,#tabInput textarea:focus,#searchRiwayatInput:focus,#searchMonitoringInput:focus,#searchOutletKontrakInput:focus,#filterQuarterSelect:focus{
+#tabInput input:focus,#tabInput select:focus,#tabInput textarea:focus,#searchRiwayatInput:focus:focus,#searchOutletKontrakInput:focus,#filterQuarterSelect:focus{
   border-color:#41a86a!important;box-shadow:0 0 0 4px rgba(0,166,81,.10)!important;outline:none!important;
 }
 #tabInput .bg-emerald-50\/40{background:linear-gradient(180deg,#f5fbf6,#eff9f2)!important;border-color:#cde6d4!important}
@@ -1249,6 +1178,100 @@ html,body{height:100%;}
 }
 </style>
 
+<!-- CASTROL GITHUB API BRIDGE START -->
+<script>
+(function () {
+    'use strict';
+
+    const CASTROL_API_URL = 'https://script.google.com/macros/s/AKfycbwZHD6DhhUjweqk8CgIrj81hMQOZOp2glKfa0C8hkpOsMdxwT8X8EDSTkcTUiY6oOzZ/exec';
+    window.CASTROL_API_URL = CASTROL_API_URL;
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'castrolApiBridge';
+    iframe.src = CASTROL_API_URL + (CASTROL_API_URL.indexOf('?') >= 0 ? '&' : '?') + 'bridge=1';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
+    (document.documentElement || document.body).appendChild(iframe);
+
+    const pending = new Map();
+    let seq = 0;
+    const REQUEST_TIMEOUT = 120000;
+
+    window.addEventListener('message', function (event) {
+        const data = event.data || {};
+        if (data.source !== 'castrol-apps-script') return;
+        if (data.type === 'ready') return;
+        if (!data.requestId) return;
+
+        const item = pending.get(data.requestId);
+        if (!item) return;
+        pending.delete(data.requestId);
+        clearTimeout(item.timer);
+
+        if (data.ok) item.resolve(data.result);
+        else item.reject(new Error(data.error || 'Terjadi kesalahan pada server Apps Script.'));
+    });
+
+    function callServer(method, args) {
+        return new Promise(function (resolve, reject) {
+            const requestId = 'castrol_' + Date.now() + '_' + (++seq);
+            const timer = setTimeout(function () {
+                pending.delete(requestId);
+                reject(new Error('Request ke server timeout: ' + method));
+            }, REQUEST_TIMEOUT);
+
+            pending.set(requestId, { resolve: resolve, reject: reject, timer: timer });
+
+            try {
+                iframe.contentWindow.postMessage({
+                    source: 'castrol-github',
+                    requestId: requestId,
+                    method: method,
+                    args: Array.isArray(args) ? args : []
+                }, '*');
+            } catch (err) {
+                clearTimeout(timer);
+                pending.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    // Compatibility layer: kode lama yang memakai google.script.run tetap berjalan.
+    function makeRunner(successHandler, failureHandler, userObject) {
+        return new Proxy({}, {
+            get: function (_target, property) {
+                if (property === 'withSuccessHandler') {
+                    return function (fn) { return makeRunner(fn, failureHandler, userObject); };
+                }
+                if (property === 'withFailureHandler') {
+                    return function (fn) { return makeRunner(successHandler, fn, userObject); };
+                }
+                if (property === 'withUserObject') {
+                    return function (obj) { return makeRunner(successHandler, failureHandler, obj); };
+                }
+
+                return function () {
+                    const args = Array.prototype.slice.call(arguments);
+                    callServer(String(property), args).then(function (result) {
+                        if (typeof successHandler === 'function') successHandler(result, userObject);
+                    }).catch(function (err) {
+                        if (typeof failureHandler === 'function') failureHandler(err, userObject);
+                        else console.error('[Castrol] Server error:', err);
+                    });
+                    return makeRunner(successHandler, failureHandler, userObject);
+                };
+            }
+        });
+    }
+
+    window.google = window.google || {};
+    window.google.script = window.google.script || {};
+    window.google.script.run = makeRunner(null, null, null);
+})();
+</script>
+<!-- CASTROL GITHUB API BRIDGE END -->
+
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -1326,47 +1349,16 @@ html,body{height:100%;}
                     <span class="sidebar-text">Input</span>
                 </button>
 
-                <button type="button" onclick="switchTab('tambahcustomer')" id="navTambahCustomer"
-                        class="sidebar-item" title="Tambah Customer" aria-label="Tambah Customer">
-                    <span class="sidebar-icon">👤</span>
-                    <span class="sidebar-text">Tambah Customer</span>
-                </button>
-
             <button type="button" onclick="switchTab('riwayat')" id="navRiwayat"
                         class="sidebar-item" title="Riwayat Transaksi" aria-label="Riwayat Transaksi">
                     <span class="sidebar-icon">📊</span>
                     <span class="sidebar-text">Riwayat</span>
                 </button>
 
-                <button type="button" onclick="switchTab('pencapaian')" id="navPencapaian"
-                        class="sidebar-item sidebar-pencapaian-menu" title="Pencapaian Sales" aria-label="Pencapaian Sales"
-                        style="display:flex !important; visibility:visible !important;">
-                    <span class="sidebar-icon">🏆</span>
-                    <span class="sidebar-text">Pencapaian Sales</span>
-                </button>
-
                 <button type="button" onclick="switchTab('monitoring')" id="navMonitoring"
                         class="sidebar-item" title="Monitoring Outlet" aria-label="Monitoring Outlet">
                     <span class="sidebar-icon">📈</span>
                     <span class="sidebar-text">Monitoring</span>
-                </button>
-
-                <button type="button" onclick="switchTab('outletkontrak')" id="navOutletKontrak"
-                        class="sidebar-item" title="Outlet Kontrak" aria-label="Outlet Kontrak">
-                    <span class="sidebar-icon">📋</span>
-                    <span class="sidebar-text">Kontrak</span>
-                </button>
-
-                <button type="button" onclick="switchTab('outletbws')" id="navOutletBWS"
-                        class="sidebar-item hidden" title="Kelola Outlet BWS" aria-label="Kelola Outlet BWS">
-                    <span class="sidebar-icon">🏪</span>
-                    <span class="sidebar-text">Outlet BWS</span>
-                </button>
-
-                <button type="button" onclick="switchTab('pricelist')" id="navPricelist"
-                        class="sidebar-item" title="Pricelist" aria-label="Pricelist">
-                    <span class="sidebar-icon">💰</span>
-                    <span class="sidebar-text">Pricelist</span>
                 </button>
 
 
@@ -1385,18 +1377,12 @@ html,body{height:100%;}
                 </div>
                 <form onsubmit="handleLogin(event)" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Username</label>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">CUST.CODE</label>
                         <input type="text" id="loginUser" required class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
-                        <input type="password" id="loginPass" required class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none">
                     </div>
                     <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg shadow transition">Masuk</button>
                 </form>
-                <div class="mt-6 text-center text-sm">
-                    Belum punya akun? <button type="button" onclick="toggleAuthMode('register')" class="text-emerald-700 font-semibold">Daftar</button>
-                </div>
+                <div class="mt-4 text-center text-[10px] text-slate-400"></div>
             </div>
 
             <!-- REGISTER -->
@@ -1430,120 +1416,53 @@ html,body{height:100%;}
             <!-- HALAMAN UTAMA -->
             <div id="mainPage" class="hidden space-y-4">
                 
-                <!-- TAB INPUT : MODERN 2-STEP WIZARD -->
+                <!-- TAB INPUT : CUSTOMER / CUST.CODE -->
                 <div id="tabInput" class="tab-content space-y-4">
                     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                         <div class="px-4 pt-4 pb-3 border-b border-slate-100">
                             <div class="flex items-center justify-between gap-3">
-                                <div>
+                                <div class="min-w-0">
                                     <div class="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-600">INPUT ORDER</div>
-                                    <h2 class="text-lg font-extrabold text-slate-800 mt-0.5">Buat Order Baru</h2>
-                                    <p class="text-[10px] text-slate-400 mt-1">Isi informasi order terlebih dahulu, lalu lanjutkan ke produk.</p>
+                                    <h2 class="text-lg font-extrabold text-slate-800 mt-0.5">Buat Order</h2>
+                                    <p class="text-[10px] text-slate-400 mt-1"></p>
                                 </div>
-                                <div class="hidden sm:flex w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 items-center justify-center text-lg">🛒</div>
-                            </div>
-
-                            <div class="flex items-center gap-2 mt-4">
-                                <div id="inputStep1Indicator" class="flex-1 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2">
-                                    <span class="w-6 h-6 rounded-full bg-emerald-700 text-white text-[10px] font-extrabold flex items-center justify-center">1</span>
-                                    <div><div class="text-[10px] font-extrabold text-emerald-800">Informasi Order</div><div class="text-[8px] text-emerald-600">Outlet & pembayaran</div></div>
-                                </div>
-                                <div class="text-slate-300 font-bold">›</div>
-                                <div id="inputStep2Indicator" class="flex-1 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                                    <span class="w-6 h-6 rounded-full bg-slate-300 text-white text-[10px] font-extrabold flex items-center justify-center">2</span>
-                                    <div><div class="text-[10px] font-extrabold text-slate-500">Tambah Produk</div><div class="text-[8px] text-slate-400">Pilih item & qty</div></div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button type="button" id="btnKirimOrder" onclick="kirimSemuaOrder()" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white py-2.5 px-4 font-extrabold text-xs shadow-sm transition whitespace-nowrap">Kirim Order</button>
+                                    <div class="hidden sm:flex w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 items-center justify-center text-lg">🛒</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- STEP 1 -->
-                        <div id="inputStep1" class="p-4 space-y-3">
-                            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">🏪</span>
-                                    <div><div class="text-xs font-extrabold text-slate-800">Informasi Outlet</div><div class="text-[9px] text-slate-400">Pilih outlet untuk mengisi data pelanggan otomatis.</div></div>
-                                </div>
-                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Outlet <span class="text-red-500">*</span></label>
-                                <select id="inputOutlet" onchange="onOutletChange()" required class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs searchable-select">
-                                    <option value="">-- Pilih Outlet --</option>
-                                </select>
-                                <div class="grid grid-cols-2 gap-2 mt-2">
-                                    <div class="bg-white border border-slate-200 rounded-xl p-2.5"><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">Cust. Code</div><input type="text" id="inputCustCode" readonly class="w-full mt-1 bg-transparent text-xs font-bold text-slate-700 outline-none"></div>
-                                    <div class="bg-white border border-slate-200 rounded-xl p-2.5"><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">Channel</div><input type="text" id="inputChannel" readonly class="w-full mt-1 bg-transparent text-xs font-bold text-slate-700 outline-none"></div>
-                                </div>
-                            </div>
-
-                            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">📋</span>
-                                    <div><div class="text-xs font-extrabold text-slate-800">Detail Transaksi</div><div class="text-[9px] text-slate-400">Tanggal dan metode pembayaran.</div></div>
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Tanggal <span class="text-red-500">*</span></label><input type="date" id="inputTanggal" required class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs"></div>
-                                    <div>
-<label class="block text-[10px] font-bold text-slate-600 mb-1">Payment</label>
-<div id="paymentButtons" class="grid grid-cols-2 gap-2">
-  <button type="button" id="paymentCashBtn" onclick="setPayment('CASH')" class="payment-btn rounded-xl border-2 px-3 py-2.5 text-xs font-bold transition-all bg-slate-900 text-white border-slate-900">CASH</button>
-  <button type="button" id="paymentCreditBtn" onclick="setPayment('CREDIT')" class="payment-btn rounded-xl border-2 px-3 py-2.5 text-xs font-bold transition-all bg-white text-slate-600 border-slate-200">CREDIT</button>
-</div>
-<input type="hidden" id="inputPayment" value="CASH">
-</div>
-                                    <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Disc</label><input type="text" id="inputDisc" value="0%" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs"></div>
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                                    <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Cashback</label><select id="cashbackSelect" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs searchable-select"><option value="">-- Pilih Cashback --</option></select></div>
-                                    <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Note Order</label><input type="text" id="inputNote" value="-" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs"></div>
-                                </div>
-                            </div>
-
-                            <button type="button" onclick="lanjutKeTambahProduk()" class="w-full mt-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white py-3 px-4 font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-2">
-                                Lanjut ke Tambah Produk <span class="text-base">→</span>
-                            </button>
-                        </div>
-
-                        <!-- STEP 2 -->
-                        <div id="inputStep2" class="hidden p-4 space-y-3">
-                            <div class="flex items-center justify-between gap-2">
-                                <div><div class="text-sm font-extrabold text-slate-800">Tambah Produk</div><div class="text-[9px] text-slate-400">Tambahkan satu atau beberapa produk ke order.</div></div>
-                                <button type="button" onclick="kembaliKeInfoOrder()" class="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-2 text-[10px] font-bold transition">← Kembali</button>
-                            </div>
-
-                            <div class="rounded-xl bg-emerald-50/60 border border-emerald-200 p-3">
-                                <div class="flex items-center justify-between gap-2 mb-2">
-                                    <div class="text-[9px] font-extrabold uppercase tracking-wider text-emerald-700">Outlet Terpilih</div>
-                                    <button type="button" onclick="kembaliKeInfoOrder()" class="text-[9px] font-bold text-emerald-700 hover:text-emerald-900">Edit informasi</button>
-                                </div>
-                                <div id="inputStep2Outlet" class="text-xs font-extrabold text-slate-800">-</div>
-                                <div id="inputStep2Meta" class="text-[9px] text-slate-500 mt-1">Cust. Code - · Channel -</div>
+                        <div class="p-4 space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">CUST.CODE</div><div id="customerInputCustCode" class="mt-1 text-sm font-extrabold text-slate-800">-</div></div>
+                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">OUTLET</div><div id="customerInputOutlet" class="mt-1 text-xs font-bold text-slate-700">-</div></div>
+                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">CHANNEL</div><div id="customerInputChannel" class="mt-1 text-xs font-bold text-slate-700">-</div></div>
                             </div>
 
                             <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
                                 <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Produk</label><select id="addItemProduk" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs searchable-select"><option value="">-- Pilih Produk --</option></select></div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Qty</label><input type="number" id="addItemQty" min="1" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs"></div>
-                                    <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Satuan</label><div class="flex rounded-xl border border-slate-200 bg-white overflow-hidden h-[38px]"><button type="button" id="btnSatuanPcs" onclick="setSatuanInput('Pcs')" class="flex-1 bg-emerald-700 text-white font-bold text-xs transition">Pcs</button><button type="button" id="btnSatuanDus" onclick="setSatuanInput('Dus')" class="flex-1 bg-transparent text-slate-700 font-bold text-xs transition">Dus</button></div><input type="hidden" id="addItemSatuan" value="Pcs"></div>
+                                    <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Satuan</label><div class="flex rounded-xl border border-slate-200 bg-white overflow-hidden h-[38px]"><button type="button" id="btnSatuanPcs" onclick="setSatuanInput('Pcs')" class="flex-1 bg-emerald-700 text-white font-bold text-xs transition">Pcs</button><button type="button" id="btnSatuanDus" onclick="setSatuanInput('Dus')" class="flex-1 bg-white text-slate-600 font-bold text-xs transition">Dus</button></div><input type="hidden" id="addItemSatuan" value="Pcs"></div>
                                 </div>
-                                <button type="button" onclick="tambahKeKeranjang()" class="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white py-2.5 font-extrabold text-xs transition">+ Tambah Item</button>
+                                <button type="button" onclick="tambahKeKeranjang()" class="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white py-2.5 text-xs font-extrabold">+ Tambah Produk</button>
                             </div>
 
-                            <div>
-                                <div class="flex items-center justify-between mb-2"><div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Daftar Item</div><div id="cartItemCount" class="text-[9px] font-bold text-slate-400">0 item</div></div>
-                                <div id="cartList" class="space-y-2"><p class="text-xs text-slate-400 text-center py-5 border border-dashed rounded-xl bg-slate-50">Belum ada item.</p></div>
-                            </div>
-
-                            <div class="rounded-2xl bg-slate-900 text-white p-4 shadow-sm">
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div><div class="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Total Volume</div><div class="text-lg font-extrabold mt-1"><span id="grandVol">0</span> <span class="text-xs font-semibold text-slate-400">L</span></div></div>
-                                    <div class="text-right"><div class="text-[8px] uppercase tracking-wider text-slate-400 font-bold">Total Value</div><div class="text-lg font-extrabold mt-1">Rp <span id="grandVal">0</span></div></div>
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <div class="flex items-center justify-between mb-2"><div class="text-[10px] font-extrabold text-slate-700">Keranjang</div><span id="cartItemCount" class="text-[9px] text-slate-400">0 item</span></div>
+                                <div id="cartList"></div>
+                                <div class="hidden" aria-hidden="true">
+                                    <span id="grandVol">0</span>
+                                    <span id="grandVal">0</span>
                                 </div>
                             </div>
 
-                            <button type="button" id="btnKirimOrder" onclick="kirimSemuaOrder()" class="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold py-3 shadow-sm transition">Kirim Order</button>
                         </div>
                     </div>
+                    <input type="hidden" id="inputOutlet"><input type="hidden" id="inputCustCode"><input type="hidden" id="inputChannel"><input type="hidden" id="inputTanggal"><input type="hidden" id="inputPayment" value="CASH"><input type="hidden" id="inputDisc" value="0%"><input type="hidden" id="inputNote" value="-"><select id="cashbackSelect" class="hidden"><option value=""></option></select>
                 </div>
 
-                <!-- TAMBAH CUSTOMER -->
                 <div id="tabTambahCustomer" class="tab-content hidden space-y-4">
                     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                         <div class="px-4 pt-4 pb-3 border-b border-slate-100">
@@ -1709,52 +1628,22 @@ html,body{height:100%;}
                 </div>
 
                 <div id="tabMonitoring" class="tab-content hidden space-y-3">
-                    <div class="flex justify-between items-center border-b border-slate-200 pb-2">
-                        <h2 class="text-base font-bold text-slate-800">Monitoring Kuartal Outlet</h2>
-                        <div class="flex items-center gap-2">
-                            <select id="filterQuarterSelect" onchange="renderMonitoringList()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                                <!-- Opsi kuartal diisi dinamis -->
-                            </select>
-                            <select id="filterMonitoringDayVisit" onchange="renderMonitoringList()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                                <option value="">Semua Day Visit</option>
-                            </select>
-                            <span id="monitoringCount" class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">0 outlet</span>
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
+                        <div>
+                            <div class="text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">MONITORING OUTLET</div>
+                            <h2 class="text-base font-extrabold text-slate-800 mt-0.5">Monitoring Kuartal & Point Trip</h2>
+                            <p class="text-[9px] text-slate-400 mt-0.5"></p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="filterQuarterSelect" onchange="renderMonitoringList()" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+                            <span id="monitoringPointYear" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-200"></span>
+                            <span id="monitoringCount" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">0 outlet</span>
                         </div>
                     </div>
 
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </span>
-                        <input type="text" id="searchMonitoringInput" oninput="filterMonitoring()" placeholder="Cari nama outlet..." class="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition">
-                    </div>
-
-                    <!-- Pembungkus Tabel dengan Dukungan Scroll Kanan-Kiri yang Responsif -->
-                    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table class="w-full text-left border-collapse text-[11px]" style="min-width: 820px;">
-                                <thead>
-                                    <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
-                                        <th class="p-2.5 font-bold" style="width: 20%;">Nama Outlet</th>
-                                        <th class="p-2.5 font-bold text-right" style="width: 13%;">Target Quartal</th>
-                                        <th class="p-2.5 font-bold text-right" style="width: 13%;">Actual</th>
-                                        <th class="p-2.5 font-bold text-right" style="width: 12%;">Gap</th>
-                                        <th class="p-2.5 font-bold text-right" style="width: 12%;">Ach.</th>
-                                        <th id="thM1" class="p-2.5 font-bold text-right" style="width: 12%;">Bulan 1</th>
-                                        <th id="thM2" class="p-2.5 font-bold text-right" style="width: 12%;">Bulan 2</th>
-                                        <th id="thM3" class="p-2.5 font-bold text-right" style="width: 13%;">Bulan 3</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="listMonitoringTableBody">
-                                    <tr>
-                                        <td colspan="8" class="text-slate-400 text-center py-6">Memuat data monitoring...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
+                    <div id="monitoringSummary" class="monitoring-summary"></div>
+                    <div id="listMonitoringTableBody" class="monitoring-card-grid">
+                        <div class="text-slate-400 text-center py-8 bg-white border border-slate-200 rounded-2xl">Memuat data monitoring...</div>
                     </div>
                 </div>
 
@@ -1763,7 +1652,7 @@ html,body{height:100%;}
                     <div class="flex justify-between items-center border-b border-slate-200 pb-2">
                         <div>
                             <h2 class="text-base font-bold text-slate-800">Outlet Kontrak</h2>
-                            <p class="text-[10px] text-slate-400 mt-0.5">Pencapaian kontrak & Point Trip tahun berjalan</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Pencapaian kontrak berdasarkan Quarter; Point Trip berdasarkan Tahun</p>
                         </div>
                         <span id="outletKontrakYear" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200"></span>
                     </div>
@@ -1972,7 +1861,7 @@ html,body{height:100%;}
             try {
                 localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
                     username: currentUsernameInput || "",
-                    sales: currentUser || ""
+                    custCode: currentUser || ""
                 }));
             } catch (e) {
                 console.warn("Gagal menyimpan sesi lokal:", e);
@@ -1988,14 +1877,19 @@ html,body{height:100%;}
             const isAdminLogin = String(currentUsernameInput || '').trim().toLowerCase() === 'admin';
             document.body.classList.toggle('admin-mode', isAdminLogin);
 
-            const navInput = document.getElementById('navInput');
-            const tabInput = document.getElementById('tabInput');
-            const navOutletBWS = document.getElementById('navOutletBWS');
-            const tabOutletBWS = document.getElementById('tabOutletBWS');
-            if (navInput) navInput.classList.toggle('hidden', isAdminLogin);
-            if (tabInput) tabInput.classList.toggle('hidden', isAdminLogin);
-            if (navOutletBWS) navOutletBWS.classList.toggle('hidden', !isAdminLogin);
-            if (tabOutletBWS && !isAdminLogin) tabOutletBWS.classList.add('hidden');
+            const accountBtn = document.getElementById('headerAccountBtn');
+            if (accountBtn) accountBtn.classList.toggle('hidden', !isAdminLogin);
+
+            // Menu yang tersedia untuk semua user hanya: Input, Riwayat, Monitoring.
+            ['navInput','navRiwayat','navMonitoring'].forEach(function(id){
+                var el=document.getElementById(id);
+                if(el) el.classList.remove('hidden');
+            });
+            // Tab selain tiga menu utama selalu disembunyikan.
+            ['tabTambahCustomer','tabPencapaian','tabOutletKontrak','tabOutletBWS','tabPricelist'].forEach(function(id){
+                var el=document.getElementById(id);
+                if(el) el.classList.add('hidden');
+            });
         }
 
         function restoreAuthState() {
@@ -2003,10 +1897,10 @@ html,body{height:100%;}
                 const raw = localStorage.getItem(AUTH_STORAGE_KEY);
                 if (!raw) return false;
                 const state = JSON.parse(raw);
-                if (!state || !state.username || !state.sales) return false;
+                if (!state || !state.username || !(state.custCode || state.sales)) return false;
 
                 currentUsernameInput = String(state.username).trim();
-                currentUser = String(state.sales).trim();
+                currentUser = String(state.custCode || state.sales).trim();
 
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('registerPage').classList.add('hidden');
@@ -2017,12 +1911,12 @@ html,body{height:100%;}
 
                 const isAdminLogin = currentUsernameInput.toLowerCase() === 'admin';
                 applyRoleVisibility();
-                document.getElementById('userBadge').textContent = isAdminLogin ? "Role: Admin" : ("Sales: " + currentUser);
+                document.getElementById('userBadge').textContent = isAdminLogin ? "Role: Admin" : ("CUST.CODE: " + currentUser);
                 document.getElementById('userBadge').classList.remove('hidden');
                 const adminTools = document.getElementById('riwayatAdminTools');
                 if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
 
-                if (!isAdminLogin) loadOutletForSales(currentUser, currentUsernameInput);
+                if (!isAdminLogin) loadCustomerContext(currentUser);
                 else loadPencapaianSalesFilter();
                 loadRiwayat(true, true);
                 if (!isAdminLogin) loadInputMasterData();
@@ -2046,7 +1940,6 @@ html,body{height:100%;}
 
             const tanggalInput = document.getElementById('inputTanggal');
             if (tanggalInput) tanggalInput.valueAsDate = new Date();
-            loadSalesOptionsForRegister();
             const restored = restoreAuthState();
             showLoading(!restored);
             // Produk/Cashback tidak lagi dimuat saat halaman pertama dibuka.
@@ -2125,7 +2018,7 @@ html,body{height:100%;}
             google.script.run.withSuccessHandler(function(res) {
                 showLoading(false);
                 if (res.success) {
-                    currentUser = res.sales;
+                    currentUser = res.custCode || currentUsernameInput;
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('registerPage').classList.add('hidden');
                     document.getElementById('mainPage').classList.remove('hidden');
@@ -2134,12 +2027,12 @@ html,body{height:100%;}
                     setSidebarState(false);
                     const isAdminLogin = currentUsernameInput.toLowerCase() === 'admin';
                     applyRoleVisibility();
-                    document.getElementById('userBadge').textContent = isAdminLogin ? "Role: Admin" : ("Sales: " + currentUser);
+                    document.getElementById('userBadge').textContent = isAdminLogin ? "Role: Admin" : ("CUST.CODE: " + currentUser);
                     document.getElementById('userBadge').classList.remove('hidden');
                     const adminTools = document.getElementById('riwayatAdminTools');
                     if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
                     saveAuthState();
-                    if (!isAdminLogin) loadOutletForSales(currentUser, currentUsernameInput);
+                    if (!isAdminLogin) loadCustomerContext(currentUser);
                     else loadPencapaianSalesFilter();
                     loadRiwayat(true, true);
                     if (!isAdminLogin) loadInputMasterData();
@@ -2147,31 +2040,22 @@ html,body{height:100%;}
                 } else {
                     showModal("Login Gagal", res.message);
                 }
-            }).prosesLogin(currentUsernameInput, document.getElementById('loginPass').value);
+            }).prosesLogin(currentUsernameInput);
         }
 
-        function loadOutletForSales(sales, usernameInput) {
-            if (usernameInput && usernameInput.toLowerCase() === 'admin') {
-                google.script.run.withSuccessHandler(function(outlets) {
-                    outletDataList = outlets || [];
-                    let select = $('#inputOutlet');
-                    select.empty().append('<option value="">-- Pilih Outlet (Semua) --</option>');
-                    outlets.forEach(o => {
-                        select.append(new Option(o.outlet, o.outlet));
-                    });
-                    refreshSelect2('#inputOutlet');
-                }).getAllOutlets();
-            } else {
-                google.script.run.withSuccessHandler(function(outlets) {
-                    outletDataList = outlets || [];
-                    let select = $('#inputOutlet');
-                    select.empty().append('<option value="">-- Pilih Outlet --</option>');
-                    outlets.forEach(o => {
-                        select.append(new Option(o.outlet, o.outlet));
-                    });
-                    refreshSelect2('#inputOutlet');
-                }).getOutletsBySales(sales);
-            }
+        function loadCustomerContext(custCode) {
+            const code = String(custCode || '').trim();
+            if (!code || code.toLowerCase() === 'admin') return;
+            google.script.run.withSuccessHandler(function(ctx) {
+                ctx = ctx || {};
+                document.getElementById('inputCustCode').value = ctx.custCode || code;
+                document.getElementById('inputOutlet').value = ctx.outlet || '';
+                document.getElementById('inputChannel').value = ctx.channel || '';
+                document.getElementById('inputTanggal').value = new Date().toISOString().slice(0,10);
+                const cc=document.getElementById('customerInputCustCode'); if(cc) cc.textContent=ctx.custCode || code;
+                const oo=document.getElementById('customerInputOutlet'); if(oo) oo.textContent=ctx.outlet || '-';
+                const ch=document.getElementById('customerInputChannel'); if(ch) ch.textContent=ctx.channel || '-';
+            }).withFailureHandler(function(err){ showModal('Gagal','Gagal memuat data CUST.CODE: '+(err&&err.message?err.message:'Terjadi kesalahan.')); }).getCustomerByCustCode(code);
         }
 
         function updateInputWizardIndicator(step) {
@@ -2327,71 +2211,50 @@ html,body{height:100%;}
 
         function kirimSemuaOrder() {
             if (isSubmitting) return;
+            // Identitas customer pada Input selalu berasal dari CUST.CODE login.
+            // Outlet dan Channel diambil dari context login yang sudah dimuat.
 
-            let outlet = $('#inputOutlet').val();
-            if (!outlet) {
-                showModal("Peringatan", "Pilih outlet terlebih dahulu!");
-                return;
-            }
-            if (shoppingCart.length === 0) {
-                showModal("Peringatan", "Keranjang masih kosong!");
-                return;
-            }
+            const custCode = String(currentUser || currentUsernameInput || '').trim();
+            if (!custCode || custCode.toLowerCase() === 'admin') { showModal('Peringatan','CUST.CODE belum teridentifikasi.'); return; }
+            if (shoppingCart.length === 0) { showModal('Peringatan','Keranjang masih kosong!'); return; }
 
-            let payload = {
-                sales: currentUser,
-                outlet: outlet,
-                custCode: document.getElementById('inputCustCode').value,
-                channel: document.getElementById('inputChannel').value,
-                tanggal: document.getElementById('inputTanggal').value,
-                payment: $('#inputPayment').val(),
-                disc: document.getElementById('inputDisc').value,
-                note: document.getElementById('inputNote').value,
+            const payload = {
+                custCode: custCode,
+                outlet: $('#inputOutlet').val() || '',
+                channel: document.getElementById('inputChannel').value || '',
+                tanggal: document.getElementById('inputTanggal').value || new Date().toISOString().slice(0,10),
+                payment: 'CASH',
+                disc: '0%',
+                note: '-',
+                cashback: '',
                 items: shoppingCart
             };
 
-            showModal("Konfirmasi Order", "Kirim order sekarang?", true, function(isOk) {
-                if (isOk) {
-                    isSubmitting = true;
-                    let btnKirim = document.getElementById('btnKirimOrder');
-                    if(btnKirim) {
-                        btnKirim.disabled = true;
-                        btnKirim.classList.add('opacity-50', 'cursor-not-allowed');
-                    }
-                    showLoading(true);
-
-                    google.script.run
-                        .withSuccessHandler(function(res) {
-                            showLoading(false);
-                            isSubmitting = false;
-                            if(btnKirim) {
-                                btnKirim.disabled = false;
-                                btnKirim.classList.remove('opacity-50', 'cursor-not-allowed');
-                            }
-
-                            if (res.success) {
-                                shoppingCart = [];
-                                renderCart();
-                                $('#inputOutlet').val(''); refreshSelect2('#inputOutlet');
-                                onOutletChange();
-                                loadRiwayat();
-                                switchTab('riwayat');
-                                showModal("Berhasil", res.message);
-                            } else {
-                                showModal("Gagal", res.message);
-                            }
-                        })
-                        .withFailureHandler(function(err) {
-                            showLoading(false);
-                            isSubmitting = false;
-                            if(btnKirim) {
-                                btnKirim.disabled = false;
-                                btnKirim.classList.remove('opacity-50', 'cursor-not-allowed');
-                            }
-                            showModal("Error Sistem", err.message);
-                        })
-                        .simpanMultiOrder(payload);
-                }
+            showModal('Konfirmasi Order', 'Kirim order sekarang?', true, function(isOk) {
+                if (!isOk) return;
+                isSubmitting = true;
+                const btnKirim = document.getElementById('btnKirimOrder');
+                if(btnKirim){btnKirim.disabled=true;btnKirim.classList.add('opacity-50','cursor-not-allowed');}
+                showLoading(true);
+                google.script.run
+                    .withSuccessHandler(function(res){
+                        showLoading(false); isSubmitting=false;
+                        if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
+                        if(res && res.success){
+                            shoppingCart=[]; renderCart();
+                            globalRiwayatData=[];
+                            loadCustomerContext(custCode);
+                            loadRiwayat(true,true);
+                            switchTab('riwayat');
+                            showModal('Berhasil',res.message);
+                        }else{ showModal('Gagal',res&&res.message?res.message:'Order gagal disimpan.'); }
+                    })
+                    .withFailureHandler(function(err){
+                        showLoading(false); isSubmitting=false;
+                        if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
+                        showModal('Error Sistem',err&&err.message?err.message:'Terjadi kesalahan.');
+                    })
+                    .simpanMultiOrder(payload);
             });
         }
 
@@ -2487,7 +2350,7 @@ html,body{height:100%;}
                         <td class="p-2.5 whitespace-nowrap text-slate-600">${escapeHtml(item.tanggal || '-')}</td>
                         <td class="p-2.5">
                             <div class="font-bold text-slate-800 min-w-[130px]">${escapeHtml(item.outlet || '-')}</div>
-                            ${isAdmin ? `<div class="text-[9px] text-slate-400 mt-1">DSR: ${escapeHtml(item.dsr || '-')}</div>` : ''}
+                            ${isAdmin ? `<div class="text-[9px] text-slate-400 mt-1">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
                         </td>
                         <td class="p-2.5">
                             <div class="text-[10px] leading-5 text-slate-600 min-w-[180px]">${productText}</div>
@@ -2714,7 +2577,7 @@ html,body{height:100%;}
             if (monitoringLoading) return;
             monitoringLoading = true;
             let container = document.getElementById('listMonitoringTableBody');
-            if (container && !silentRefresh) container.innerHTML = '<tr><td colspan="8" class="text-slate-400 text-center py-6">Memuat...</td></tr>';
+            if (container && !silentRefresh) container.innerHTML = '<div class="text-slate-400 text-center py-8 bg-white border border-slate-200 rounded-2xl">Memuat...</div>';
             google.script.run.withSuccessHandler(function(dataObj) {
                 monitoringLoading = false;
                 rawMonitoringDataObject = dataObj || {};
@@ -2726,14 +2589,8 @@ html,body{height:100%;}
                 renderMonitoringList();
             }).withFailureHandler(function(err) {
                 monitoringLoading = false;
-                if (container) container.innerHTML = '<tr><td colspan="8" class="text-red-500 text-center py-6 text-xs">Gagal memuat monitoring: ' + escapeHtml(err && err.message ? err.message : 'Terjadi kesalahan.') + '</td></tr>';
+                if (container) container.innerHTML = '<div class="text-red-500 text-center py-8 bg-white border border-red-200 rounded-2xl text-xs">Gagal memuat monitoring: ' + escapeHtml(err && err.message ? err.message : 'Terjadi kesalahan.') + '</div>';
             }).getMonitoringOutletData(currentUser, currentUsernameInput);
-        }
-
-        function filterMonitoring() {
-            // Pencarian hanya menyaring data Monitoring yang sudah dimuat.
-            // Tidak mengambil data baru dari server.
-            renderMonitoringList();
         }
 
         function renderMonitoringList() {
@@ -2742,257 +2599,160 @@ html,body{height:100%;}
             if (monitoringTab) monitoringTab.classList.toggle('non-admin-login', !isMonitoringAdmin);
 
             const quarterSelect = document.getElementById('filterQuarterSelect');
-            const searchInput = document.getElementById('searchMonitoringInput');
-            let selectedQuarter = quarterSelect ? String(quarterSelect.value || '').trim() : '';
-            let keyword = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-            let container = document.getElementById('listMonitoringTableBody');
-            let countBadge = document.getElementById('monitoringCount');
+            const selectedQuarter = quarterSelect ? String(quarterSelect.value || '').trim() : '';
+            const container = document.getElementById('listMonitoringTableBody');
+            const summary = document.getElementById('monitoringSummary');
+            const countBadge = document.getElementById('monitoringCount');
+            const pointYearBadge = document.getElementById('monitoringPointYear');
+
+            if (pointYearBadge) pointYearBadge.textContent = 'Point Tahun ' + (String(selectedQuarter).split(' ')[1] || '');
 
             if (!selectedQuarter || !rawMonitoringDataObject[selectedQuarter]) {
-                container.innerHTML = `<tr><td colspan="8" class="text-slate-400 text-center py-8 bg-white">Belum ada data untuk kuartal ini.</td></tr>`;
-                countBadge.textContent = "0 outlet";
+                if (container) container.innerHTML = '<div class="text-slate-400 text-center py-8 bg-white border border-slate-200 rounded-2xl">Belum ada data untuk kuartal ini.</div>';
+                if (summary) summary.innerHTML = '';
+                if (countBadge) countBadge.textContent = '0 outlet';
                 return;
             }
 
-            let outletMap = rawMonitoringDataObject[selectedQuarter];
-            let dataArray = Object.values(outletMap);
-
-            const dayVisitSelect = document.getElementById('filterMonitoringDayVisit');
-            const selectedDayVisit = String(dayVisitSelect && dayVisitSelect.value || '').trim().toUpperCase();
-            const dayVisitOrder = {SENIN:1,SELASA:2,RABU:3,KAMIS:4,JUMAT:5,SABTU:6,MINGGU:7};
-            const uniqueDayVisits = {};
-            dataArray.forEach(function(item) { const dv=String(item.dayVisit||'').trim(); if(dv) uniqueDayVisits[dv]=true; });
-            if(dayVisitSelect){
-                const currentDay=dayVisitSelect.value;
-                const opts=Object.keys(uniqueDayVisits).sort(function(a,b){const aa=dayVisitOrder[a.toUpperCase()]||99,bb=dayVisitOrder[b.toUpperCase()]||99;return aa-bb||a.localeCompare(b);});
-                dayVisitSelect.innerHTML='<option value="">Semua Day Visit</option>'+opts.map(function(dv){return '<option value="'+escapeHtml(dv)+'">'+escapeHtml(dv)+'</option>';}).join('');
-                if(opts.indexOf(currentDay)!==-1)dayVisitSelect.value=currentDay;
-            }
-            let filtered = dataArray.filter(item => {
-                const outletName = String(item && item.outlet != null ? item.outlet : '').trim().toLowerCase();
-                const outletMatch = !keyword || outletName.indexOf(keyword) !== -1;
-                const dayMatch = !selectedDayVisit ||
-                    String(item && item.dayVisit != null ? item.dayVisit : '').trim().toUpperCase() === selectedDayVisit;
-                return outletMatch && dayMatch;
+            const outletMap = rawMonitoringDataObject[selectedQuarter];
+            const dataArray = Object.values(outletMap || {});
+            // Semua outlet pada quarter terpilih langsung ditampilkan.
+            let filtered = dataArray.slice().sort(function(a,b){
+                return String(a.outlet||'').localeCompare(String(b.outlet||''));
             });
-            filtered.sort(function(a,b){
-                const aa=dayVisitOrder[String(a.dayVisit||'').trim().toUpperCase()]||99;
-                const bb=dayVisitOrder[String(b.dayVisit||'').trim().toUpperCase()]||99;
-                return aa-bb||String(a.dayVisit||'').localeCompare(String(b.dayVisit||''))||String(a.outlet||'').localeCompare(String(b.outlet||''));
+
+            if (countBadge) countBadge.textContent = filtered.length + ' outlet';
+            const quarterMonthNames={Q1:['Januari','Februari','Maret'],Q2:['April','Mei','Juni'],Q3:['Juli','Agustus','September'],Q4:['Oktober','November','Desember']};
+            const monthLabels=quarterMonthNames[String(selectedQuarter).split(' ')[0]]||['Bulan 1','Bulan 2','Bulan 3'];
+
+            let totalTarget=0, totalActual=0, totalPoint=0, totalPointKarton=0;
+            filtered.forEach(function(item){
+                totalTarget += Number(item.targetQuarter||0);
+                totalActual += Number(item.totalQuarterVol||0);
+                totalPointKarton += Number(item.pointQuarterKarton||0);
+                totalPoint += Number(item.pointQuarterTotal||0);
             });
-            countBadge.textContent = `${filtered.length} outlet`;
-
-            updateQuarterMonthHeaderLabels(selectedQuarter);
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<tr><td colspan="8" class="text-slate-400 text-center py-8 bg-white">Outlet tidak ditemukan.</td></tr>`;
-                return;
-            }
-
-            let html = "";
-            filtered.forEach((item, index) => {
-                let rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
-                
-                let target = Number(item.targetQuarter || 0);
-                let actual = Number(item.totalQuarterVol || 0);
-                let achievement = target > 0 ? (actual / target) * 100 : 0;
-
-                let dataString = encodeURIComponent(JSON.stringify({
-                    outlet: item.outlet,
-                    quarter: selectedQuarter,
-                    total: actual,
-                    targetQuarter: target,
-                    targetQuarterLiter: Number(item.targetQuarterLiter || 0),
-                    targetMonthly: Number(item.targetMonthly || 0),
-                    targetMonthlyLiter: Number(item.targetMonthlyLiter || 0),
-                    achievement: achievement,
-                    m1: item.m1,
-                    m2: item.m2,
-                    m3: item.m3
-                }));
-
-                let achClass = achievement >= 100 ? 'text-emerald-700' : (achievement >= 80 ? 'text-amber-600' : 'text-red-600');
-                html += `
-                    <tr class="${rowBg} border-b border-slate-100 hover:bg-emerald-50/60 cursor-pointer transition" onclick="tampilkanDetailMonitoring('${dataString}')">
-                        <td class="p-2.5 font-semibold text-slate-800">${escapeHtml(item.outlet || '')}</td>
-                        <td class="p-2.5 text-right font-bold text-slate-700">${target.toFixed(1)} dus</td>
-                        <td class="p-2.5 text-right font-bold text-emerald-700">${actual.toFixed(1)} dus</td>
-                        <td class="p-2.5 text-right font-semibold ${actual - target >= 0 ? 'text-emerald-700' : 'text-red-600'}">${(actual - target).toFixed(1)} dus</td>
-                        <td class="p-2.5 text-right font-bold ${achClass}">${target > 0 ? achievement.toFixed(1) + '%' : '-'}</td>
-                        <td class="p-2.5 text-right text-slate-600 font-medium">${Number(item.m1 || 0).toFixed(1)} dus</td>
-                        <td class="p-2.5 text-right text-slate-600 font-medium">${Number(item.m2 || 0).toFixed(1)} dus</td>
-                        <td class="p-2.5 text-right text-slate-600 font-medium">${Number(item.m3 || 0).toFixed(1)} dus</td>
-                    </tr>
+            const totalAch=totalTarget>0?(totalActual/totalTarget)*100:0;
+            if(summary){
+                summary.innerHTML=`
+                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Actual Quartal</div><div class="monitoring-summary-value">${formatNumberID(totalActual,1)} dus</div><div class="text-[8px] text-slate-400 mt-1">Target ${formatNumberID(totalTarget,1)} dus • ${formatPercentID(totalAch)}</div></div>
+                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Point Trip Tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')}</div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Total 1 tahun • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
                 `;
+            }
+
+            if(!filtered.length){
+                if(container) container.innerHTML='<div class="col-span-full text-slate-400 text-center py-8 bg-white border border-slate-200 rounded-2xl">Outlet tidak ditemukan.</div>';
+                return;
+            }
+
+            let html='';
+            filtered.forEach(function(item){
+                const target=Number(item.targetQuarter||0), actual=Number(item.totalQuarterVol||0), gap=actual-target;
+                const achievement=target>0?(actual/target)*100:0;
+                const achWidth=Math.min(Math.max(achievement,0),100);
+                const achColor=achievement>=100?'#059669':achievement>=80?'#d97706':'#dc2626';
+                const allCats=Array.isArray(item.pointByCategory)?item.pointByCategory:[];
+                const pointShown=Number(item.pointQuarterTotal||0);
+                const pointKartonShown=Number(item.pointQuarterKarton||0);
+                const categoryRows=allCats.slice(0,6).map(function(r){return `<div class="monitoring-category-row"><span class="cat-name">${escapeHtml(r.kategori||'Lainnya')}</span><span class="cat-number">${formatNumberID(r.volume,1)}</span><span class="cat-number">${formatNumberID(r.karton,1)}</span><span class="cat-rate">${formatNumberID(r.pointRate,1)}</span><strong>${formatNumberID(r.point,1)} pt</strong></div>`;}).join('');
+                html+=`<div class="monitoring-outlet-card">
+                    <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)} • Actual DAMEN</div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
+                    <div class="monitoring-card-body">
+                        <div class="monitoring-kpi-grid">
+                            <div class="monitoring-kpi"><div class="monitoring-kpi-label">Target Quartal</div><div class="monitoring-kpi-value">${formatNumberID(target,1)} dus</div></div>
+                            <div class="monitoring-kpi"><div class="monitoring-kpi-label">Actual</div><div class="monitoring-kpi-value main">${formatNumberID(actual,1)} dus</div></div>
+                            <div class="monitoring-kpi"><div class="monitoring-kpi-label">Gap</div><div class="monitoring-kpi-value" style="color:${gap>=0?'#047857':'#dc2626'}">${formatNumberID(gap,1)} dus</div></div>
+                            <div class="monitoring-kpi"><div class="monitoring-kpi-label">Achievement</div><div class="monitoring-kpi-value" style="color:${achColor}">${target>0?formatPercentID(achievement):'-'}</div></div>
+                        </div>
+                        <div class="mt-3"><div class="flex justify-between mb-1"><span class="text-[8px] font-bold text-slate-500">Pencapaian Quartal</span><span class="text-[8px] font-bold text-slate-500">${target>0?formatPercentID(achievement):'-'}</span></div><div class="monitoring-progress"><div style="width:${achWidth}%;background:${achColor}"></div></div></div>
+                        <div class="monitoring-month-grid">
+                            <div class="monitoring-month"><div class="monitoring-month-label">${escapeHtml(monthLabels[0])}</div><div class="monitoring-month-value">${formatNumberID(item.m1,1)} dus</div></div>
+                            <div class="monitoring-month"><div class="monitoring-month-label">${escapeHtml(monthLabels[1])}</div><div class="monitoring-month-value">${formatNumberID(item.m2,1)} dus</div></div>
+                            <div class="monitoring-month"><div class="monitoring-month-label">${escapeHtml(monthLabels[2])}</div><div class="monitoring-month-value">${formatNumberID(item.m3,1)} dus</div></div>
+                        </div>
+                        <div class="monitoring-point-box">
+  <div class="monitoring-point-head">
+    <div>
+      <div class="monitoring-point-title">Point Trip Tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')}</div>
+      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun ${escapeHtml(String(selectedQuarter).split(' ')[1] || '')} • sumber DAMEN</div>
+      <div class="monitoring-point-subtitle">Semua kategori • Tahun ${item.pointYear||new Date().getFullYear()}</div>
+    </div>
+    <div class="monitoring-point-total-wrap">
+      <div class="monitoring-point-total-label">Total Point</div>
+      <div class="monitoring-point-total">${formatNumberID(pointShown,1)} pt</div>
+    </div>
+  </div>
+  <div class="monitoring-point-metrics">
+    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Volume Tahun</div><div class="monitoring-point-metric-value">${formatNumberID(item.pointQuarterVolume,1)}</div></div>
+    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton ekuivalen</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
+  </div>
+  ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
+  <div class="monitoring-point-formula"><b>Cara hitung:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
+</div>
+                    </div></div>`;
             });
-            container.innerHTML = html;
+            if(container) container.innerHTML=html;
         }
 
         function tampilkanDetailMonitoring(encodedData) {
-            let data = JSON.parse(decodeURIComponent(encodedData));
-            let initialMsg = `Memuat detail transaksi...`;
+            let data;
+            try { data = JSON.parse(decodeURIComponent(encodedData)); }
+            catch(e){ showModal('Error','Data detail Monitoring tidak valid.'); return; }
 
-            document.getElementById('modalTitle').textContent = "DETAIL MONITORING OUTLET";
-            document.getElementById('modalSubtitle').textContent = data.outlet || '';
-            const initialTarget = Number(data.targetQuarter || 0);
-            const initialActual = Number(data.total || 0);
-            const initialGap = initialActual - initialTarget;
-            const initialAch = initialTarget > 0 ? (initialActual / initialTarget) * 100 : 0;
+            const target=Number(data.targetQuarter||0), actual=Number(data.total||0), gap=actual-target;
+            const ach=target>0?(actual/target)*100:0;
+            const pointQuarter=Number(data.pointQuarterTotal||0), pointVol=Number(data.pointQuarterVolume||0), pointKarton=Number(data.pointQuarterKarton||0);
+            const cats=Array.isArray(data.pointByCategory)?data.pointByCategory:[];
+            const catHtml=cats.length?`<div class="mt-3 border border-indigo-100 rounded-xl overflow-hidden"><div class="px-3 py-2 bg-indigo-50 border-b border-indigo-100"><div class="text-[10px] font-extrabold text-indigo-800">POINT TRIP PER KATEGORI</div><div class="text-[8px] text-indigo-500 mt-0.5">Tahun ${escapeHtml(String(data.pointYear || String(data.pointQuarter||data.quarter||'').split(' ')[1] || ''))} • Kategori berasal dari DAMEN kolom AN</div></div><div class="overflow-x-auto"><table class="w-full text-[9px]"><thead><tr class="bg-white border-b border-slate-200"><th class="p-2 text-left">Kategori</th><th class="p-2 text-right">Volume</th><th class="p-2 text-right">Karton</th><th class="p-2 text-right">Rate</th><th class="p-2 text-right">Point</th></tr></thead><tbody>${cats.map(function(r){return `<tr class="border-b border-slate-100"><td class="p-2 font-semibold text-slate-700">${escapeHtml(r.kategori||'Lainnya')}</td><td class="p-2 text-right">${formatNumberID(r.volume,1)}</td><td class="p-2 text-right">${formatNumberID(r.karton,1)}</td><td class="p-2 text-right">${formatNumberID(r.pointRate,1)}</td><td class="p-2 text-right font-extrabold text-indigo-700">${formatNumberID(r.point,1)}</td></tr>`;}).join('')}</tbody></table></div></div>`:'<div class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[9px] text-slate-400 text-center">Belum ada Point Trip pada tahun ini untuk outlet ini.</div>';
 
-            document.getElementById('modalBody').innerHTML = `
-                <div class="modal-detail-summary">
-                    <div class="modal-stat-card">
-                        <div class="modal-stat-label">Target</div>
-                        <div class="modal-stat-value">${initialTarget.toFixed(1)} dus</div>
+            document.getElementById('modalTitle').textContent='DETAIL MONITORING OUTLET';
+            document.getElementById('modalSubtitle').textContent=(data.outlet||'')+' • '+(data.quarter||'');
+            document.getElementById('modalBody').innerHTML=`
+                <div class="space-y-3">
+                    <div class="rounded-xl bg-gradient-to-r from-slate-900 to-emerald-900 text-white p-3">
+                        <div class="text-[9px] uppercase tracking-wider text-emerald-300 font-bold">Outlet Monitoring</div>
+                        <div class="text-sm font-extrabold mt-1">${escapeHtml(data.outlet||'-')}</div>
+                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')} • Actual DAMEN</div>
                     </div>
-                    <div class="modal-stat-card">
-                        <div class="modal-stat-label">Actual</div>
-                        <div class="modal-stat-value is-main">${initialActual.toFixed(1)} dus</div>
+                    <div class="modal-detail-summary">
+                        <div class="modal-stat-card"><div class="modal-stat-label">Target</div><div class="modal-stat-value">${formatNumberID(target,1)} dus</div></div>
+                        <div class="modal-stat-card"><div class="modal-stat-label">Actual</div><div class="modal-stat-value is-main">${formatNumberID(actual,1)} dus</div></div>
+                        <div class="modal-stat-card"><div class="modal-stat-label">Gap</div><div class="modal-stat-value">${formatNumberID(gap,1)} dus</div></div>
+                        <div class="modal-stat-card"><div class="modal-stat-label">Ach.</div><div class="modal-stat-value">${target>0?formatPercentID(ach):'-'}</div></div>
                     </div>
-                    <div class="modal-stat-card">
-                        <div class="modal-stat-label">Gap</div>
-                        <div class="modal-stat-value">${initialGap.toFixed(1)} dus</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-2.5"><div class="text-[8px] text-indigo-500 font-bold">POINT TRIP TAHUN</div><div class="text-lg font-extrabold text-indigo-800 mt-1">${formatNumberID(pointQuarter,1)} pt</div><div class="text-[8px] text-indigo-500 mt-1">Tahun ${escapeHtml(String(data.pointYear || String(data.pointQuarter||data.quarter||'').split(' ')[1] || ''))}</div></div>
+                        <div class="rounded-xl border border-slate-200 bg-white p-2.5"><div class="text-[8px] text-slate-400 font-bold">VOLUME KUARTAL</div><div class="text-lg font-extrabold text-slate-800 mt-1">${formatNumberID(pointVol,1)}</div><div class="text-[8px] text-slate-400 mt-1">${formatNumberID(pointKarton,1)} dus ekuivalen</div></div>
                     </div>
-                    <div class="modal-stat-card">
-                        <div class="modal-stat-label">Ach.</div>
-                        <div class="modal-stat-value">${initialTarget > 0 ? initialAch.toFixed(1) + '%' : '-'}</div>
-                    </div>
-                </div>
-                <div class="text-xs text-slate-400 text-center py-6">${initialMsg}</div>
-            `;
-            document.getElementById('customModal').style.display = 'flex';
-            document.getElementById('modalCancelBtn').style.display = 'none';
+                    ${catHtml}
+                    <div id="monitoringDetailProducts" class="pt-1"><div class="text-xs text-slate-400 text-center py-5">Memuat detail transaksi...</div></div>
+                </div>`;
+            document.getElementById('customModal').style.display='flex';
+            document.getElementById('modalCancelBtn').style.display='none';
 
-            google.script.run
-                .withSuccessHandler(function(produkList) {
-                    let produkHtml = "";
-                    if (!produkList || produkList.length === 0) {
-                        produkHtml = `<p class="text-slate-400 text-xs py-2 italic">Tidak ada transaksi pada periode ini.</p>`;
-                    } else {
-                        // Grouping rincian berdasarkan tanggal.
-                        // Setiap tanggal ditampilkan sebagai header grup, lalu produk-produk di bawahnya.
-                        let grouped = {};
-                        produkList.forEach(function(p) {
-                            let tglValue = p.tanggal !== undefined && p.tanggal !== null && String(p.tanggal).trim()
-                                ? String(p.tanggal).trim() : '-';
-                            if (!grouped[tglValue]) grouped[tglValue] = [];
-                            grouped[tglValue].push(p);
-                        });
-
-                        let groupedDates = Object.keys(grouped).sort(function(a, b) {
-                            if (a === '-') return 1;
-                            if (b === '-') return -1;
-                            return new Date(b).getTime() - new Date(a).getTime();
-                        });
-
-                        produkHtml = `
-                            <div class="modal-table-wrap">
-                                <table class="modal-detail-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:70px; text-align:center;">No</th>
-                                            <th style="text-align:left;">Produk</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-
-                        let nomor = 1;
-                        groupedDates.forEach(function(tgl) {
-                            let dateLabel = tgl;
-                            if (tgl !== '-') {
-                                let parsed = new Date(tgl);
-                                if (!isNaN(parsed.getTime())) {
-                                    dateLabel = parsed.toLocaleDateString('id-ID', {
-                                        day: '2-digit', month: 'long', year: 'numeric'
-                                    });
-                                }
-                            }
-
-                            produkHtml += `
-                                <tr class="monitor-date-group-row">
-                                    <td colspan="2" class="monitor-date-group-cell">
-                                        <div class="monitor-date-group-label">
-                                            <span class="monitor-date-group-icon">📅</span>
-                                            <span>${escapeHtml(dateLabel)}</span>
-                                            <span class="monitor-date-group-count">${grouped[tgl].length} produk</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-
-                            grouped[tgl].forEach(function(p) {
-                                let produkValue = p.produk !== undefined && p.produk !== null ? String(p.produk) : '-';
-                                produkHtml += `
-                                    <tr>
-                                        <td class="p-2.5 text-center text-slate-400 font-bold">${nomor++}</td>
-                                        <td class="modal-product-name">${escapeHtml(produkValue)}</td>
-                                    </tr>
-                                `;
-                            });
-                        });
-
-                        produkHtml += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
-                    }
-
-                    const detailTarget = Number(data.targetQuarter || 0);
-                    const detailActual = Number(data.total || 0);
-                    const detailGap = detailActual - detailTarget;
-                    const detailAch = detailTarget > 0 ? (detailActual / detailTarget) * 100 : 0;
-
-                    let finalMsgHtml = `
-                        <div class="modal-detail-summary">
-                            <div class="modal-stat-card">
-                                <div class="modal-stat-label">Target</div>
-                                <div class="modal-stat-value">${detailTarget.toFixed(1)} dus</div>
-                            </div>
-                            <div class="modal-stat-card">
-                                <div class="modal-stat-label">Actual</div>
-                                <div class="modal-stat-value is-main">${detailActual.toFixed(1)} dus</div>
-                            </div>
-                            <div class="modal-stat-card">
-                                <div class="modal-stat-label">Gap</div>
-                                <div class="modal-stat-value">${detailGap.toFixed(1)} dus</div>
-                            </div>
-                            <div class="modal-stat-card">
-                                <div class="modal-stat-label">Ach.</div>
-                                <div class="modal-stat-value">${detailTarget > 0 ? detailAch.toFixed(1) + '%' : '-'}</div>
-                            </div>
-                        </div>
-                        ${produkHtml}
-                    `;
-
-                    document.getElementById('modalBody').innerHTML = finalMsgHtml;
-                })
-                .withFailureHandler(function(err) {
-                    document.getElementById('modalBody').innerHTML = `
-                        <p class="text-red-500 text-xs py-4 text-center">
-                            Gagal memuat detail: ${err && err.message ? err.message : 'Terjadi kesalahan.'}
-                        </p>
-                    `;
-                })
-                .getProdukDibeliOutletQuarter(data.outlet, data.quarter);
+            google.script.run.withSuccessHandler(function(produkList){
+                let produkHtml='';
+                if(!produkList||produkList.length===0){ produkHtml='<div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[9px] text-slate-400 text-center">Tidak ada transaksi pada periode ini.</div>'; }
+                else {
+                    let grouped={};
+                    produkList.forEach(function(p){let t=String(p.tanggal||'-').trim()||'-';if(!grouped[t])grouped[t]=[];grouped[t].push(p);});
+                    let dates=Object.keys(grouped).sort(function(a,b){if(a==='-')return 1;if(b==='-')return -1;return new Date(b)-new Date(a);});
+                    let no=1;
+                    produkHtml='<div class="border border-slate-200 rounded-xl overflow-hidden"><div class="px-3 py-2 bg-slate-50 border-b border-slate-200"><div class="text-[10px] font-extrabold text-slate-700">TRANSAKSI DAMEN</div><div class="text-[8px] text-slate-400">Produk yang membentuk actual pada quarter terpilih</div></div><div class="overflow-x-auto"><table class="w-full text-[9px]"><thead><tr class="border-b border-slate-200"><th class="p-2 text-center">No</th><th class="p-2 text-left">Tanggal</th><th class="p-2 text-left">Produk</th></tr></thead><tbody>';
+                    dates.forEach(function(t){let label=t;if(t!=='-'){let d=new Date(t);if(!isNaN(d))label=d.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});}produkHtml+=`<tr class="bg-slate-50/70"><td colspan="3" class="p-2 font-extrabold text-emerald-700">📅 ${escapeHtml(label)} <span class="text-[8px] text-slate-400 font-normal">• ${grouped[t].length} produk</span></td></tr>`;grouped[t].forEach(function(x){produkHtml+=`<tr class="border-b border-slate-100"><td class="p-2 text-center text-slate-400">${no++}</td><td class="p-2 text-slate-500">${escapeHtml(label)}</td><td class="p-2 font-semibold text-slate-700">${escapeHtml(String(x.produk||'-'))}</td></tr>`;});});
+                    produkHtml+='</tbody></table></div></div>';
+                }
+                const el=document.getElementById('monitoringDetailProducts');if(el)el.innerHTML=produkHtml;
+            }).withFailureHandler(function(err){const el=document.getElementById('monitoringDetailProducts');if(el)el.innerHTML='<div class="text-red-500 text-xs py-4 text-center">Gagal memuat detail: '+escapeHtml(err&&err.message?err.message:'Terjadi kesalahan.')+'</div>';}).getProdukDibeliOutletQuarter(data.outlet,data.quarter,currentUsernameInput);
         }
 
         function updateQuarterMonthHeaderLabels(quarterKey) {
-            let parts = quarterKey.split(" ");
-            let qNum = parts[0]; 
-            
-            let mNames = {
-                "Q1": ["Januari", "Februari", "Maret"],
-                "Q2": ["April", "Mei", "Juni"],
-                "Q3": ["Juli", "Agustus", "September"],
-                "Q4": ["Oktober", "November", "Desember"]
-            };
-
-            let months = mNames[qNum] || ["Bulan 1", "Bulan 2", "Bulan 3"];
-            document.getElementById('thM1').textContent = months[0];
-            document.getElementById('thM2').textContent = months[1];
-            document.getElementById('thM3').textContent = months[2];
+            // Legacy helper kept for compatibility; Monitoring cards now render month labels directly.
+            const m1=document.getElementById('thM1'), m2=document.getElementById('thM2'), m3=document.getElementById('thM3');
+            if(!m1||!m2||!m3) return;
+            const q=String(quarterKey||'').split(' ')[0];
+            const names={Q1:['Januari','Februari','Maret'],Q2:['April','Mei','Juni'],Q3:['Juli','Agustus','September'],Q4:['Oktober','November','Desember']}[q]||['Bulan 1','Bulan 2','Bulan 3'];
+            m1.textContent=names[0];m2.textContent=names[1];m3.textContent=names[2];
         }
 
         function populateRiwayatDsrFilter() {
@@ -3143,7 +2903,7 @@ html,body{height:100%;}
                             </div>
                         </div>
 
-                        <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Produk dari DAMEN kolom M</div>
+                        <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Rincian Produk Terbeli</div>
                         <div class="modal-table-wrap">
                             <table class="modal-detail-table">
                                 <thead>
@@ -3191,15 +2951,21 @@ html,body{height:100%;}
                 detailModal.style.display = 'none';
             }
 
-            showLoading(true);
-            google.script.run.withSuccessHandler(function(res) {
-                showLoading(false);
-                if (res && res.whatsappUrl) {
-                    window.open(res.whatsappUrl, '_blank');
-                } else {
-                    showModal("Informasi", "Gagal memuat link WhatsApp untuk order " + idInput);
-                }
-            }).getWhatsAppUrlById(idInput);
+            // Jangan tampilkan loading overlay untuk aksi WA agar klik terasa instan.
+            // Proses server tetap berjalan di background dan hanya membuka WhatsApp
+            // setelah URL berhasil diterima.
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if (res && res.whatsappUrl) {
+                        window.open(res.whatsappUrl, '_blank');
+                    } else {
+                        showModal("Informasi", (res && res.message) || "Gagal memuat link WhatsApp untuk order " + idInput);
+                    }
+                })
+                .withFailureHandler(function(err) {
+                    showModal("Error Sistem", err && err.message ? err.message : "Gagal memuat link WhatsApp untuk order " + idInput);
+                })
+                .getWhatsAppUrlById(idInput);
         }
 
 
@@ -3334,8 +3100,16 @@ html,body{height:100%;}
                         .withSuccessHandler(function(res) {
                             showLoading(false);
                             if (res && res.success) {
+                                // Jangan reload seluruh riwayat dari server setelah hapus.
+                                // Hapus langsung dari data lokal agar tabel terasa instan.
+                                const deletedMap = {};
+                                ids.forEach(function(id) { deletedMap[String(id)] = true; });
+                                globalRiwayatData = (globalRiwayatData || []).filter(function(item) {
+                                    return !deletedMap[String(item && item.id || '')];
+                                });
                                 selectedRiwayatIds = {};
-                                loadRiwayat(true, true);
+                                riwayatPage = 1;
+                                filterRiwayat();
                             }
                             showModal(
                                 res && res.success ? 'Berhasil' : 'Gagal',
@@ -3357,8 +3131,14 @@ html,body{height:100%;}
                     showLoading(true);
                     google.script.run.withSuccessHandler(function(res) {
                         showLoading(false);
-                        showModal("Informasi", res.message);
-                        if (res.success) loadRiwayat();
+                        if (res && res.success) {
+                            globalRiwayatData = (globalRiwayatData || []).filter(function(item) {
+                                return String(item && item.id || '') !== String(idInput);
+                            });
+                            delete selectedRiwayatIds[String(idInput)];
+                            filterRiwayat();
+                        }
+                        showModal("Informasi", res && res.message ? res.message : "Tidak ada respons server.");
                     }).hapusOrderById(idInput);
                 }
             });
@@ -4366,7 +4146,7 @@ html,body{height:100%;}
             const modal = document.getElementById('customModal');
             if (modal && modal.style.display === 'flex') return;
 
-            const activeTabs = ['tabRiwayat','tabPencapaian','tabMonitoring','tabOutletKontrak','tabOutletBWS','tabPricelist','tabTambahCustomer'];
+            const activeTabs = ['tabInput','tabRiwayat','tabMonitoring'];
             const activeTab = activeTabs.find(function(id) {
                 const el = document.getElementById(id);
                 return el && !el.classList.contains('hidden');
@@ -4377,16 +4157,8 @@ html,body{height:100%;}
             // 2. Pricelist
             // 3. Monitoring
             // 4. Pencapaian Sales
-            if (
-                activeTab === 'tabOutletKontrak' ||
-                activeTab === 'tabOutletBWS' ||
-                activeTab === 'tabPricelist' ||
-                activeTab === 'tabMonitoring' ||
-                activeTab === 'tabPencapaian'
-            ) return;
-
+            if (activeTab === 'tabMonitoring') return;
             if (activeTab === 'tabRiwayat') loadRiwayat(true, true);
-            else if (activeTab === 'tabTambahCustomer') loadTambahCustomerTable(true);
         }
 
         function startAutoRefresh() {
@@ -4395,20 +4167,39 @@ html,body{height:100%;}
         }
 
         function switchTab(tab) {
-            const isAdminLogin = String(currentUsernameInput || '').trim().toLowerCase() === 'admin';
-            if (isAdminLogin && tab === 'input') { applyRoleVisibility(); return; }
-            const tabMap = {input:'tabInput',tambahcustomer:'tabTambahCustomer',riwayat:'tabRiwayat',pencapaian:'tabPencapaian',monitoring:'tabMonitoring',outletkontrak:'tabOutletKontrak',outletbws:'tabOutletBWS',pricelist:'tabPricelist'};
-            const navMap = {input:'navInput',tambahcustomer:'navTambahCustomer',riwayat:'navRiwayat',pencapaian:'navPencapaian',monitoring:'navMonitoring',outletkontrak:'navOutletKontrak',outletbws:'navOutletBWS',pricelist:'navPricelist'};
-            Object.keys(tabMap).forEach(function(key){const el=document.getElementById(tabMap[key]);if(el)el.classList.toggle('hidden',key!==tab);});
-            Object.keys(navMap).forEach(function(key){const el=document.getElementById(navMap[key]);if(el)el.className=key===tab?'sidebar-item sidebar-item-active':'sidebar-item';});
+            // Hanya tiga tab yang tersedia di sistem: Input, Riwayat, Monitoring.
+            if (!['input','riwayat','monitoring'].includes(tab)) tab = 'input';
+
+            const tabMap = {
+                input:'tabInput',
+                riwayat:'tabRiwayat',
+                monitoring:'tabMonitoring'
+            };
+            const navMap = {
+                input:'navInput',
+                riwayat:'navRiwayat',
+                monitoring:'navMonitoring'
+            };
+
+            // Sembunyikan semua tab yang tidak digunakan.
+            ['tabTambahCustomer','tabPencapaian','tabOutletKontrak','tabOutletBWS','tabPricelist'].forEach(function(id){
+                const el=document.getElementById(id);
+                if(el) el.classList.add('hidden');
+            });
+
+            Object.keys(tabMap).forEach(function(key){
+                const el=document.getElementById(tabMap[key]);
+                if(el) el.classList.toggle('hidden',key!==tab);
+            });
+            Object.keys(navMap).forEach(function(key){
+                const el=document.getElementById(navMap[key]);
+                if(el) el.className=key===tab?'sidebar-item sidebar-item-active':'sidebar-item';
+            });
+
             setSidebarState(true);
-            if(tab==='tambahcustomer'){loadTambahCustomerMaster();setTanggalTambahCustomer();loadTambahCustomerTable(false);}
-            if(tab==='riwayat')loadRiwayat();
-            if(tab==='pencapaian')loadPencapaianSales();
-            if(tab==='monitoring')loadMonitoring();
-            if(tab==='outletkontrak')loadOutletKontrak();
-            if(tab==='outletbws')loadOutletBWSAdmin(false);
-            if(tab==='pricelist')loadPricelist(false);
+
+            if(tab==='riwayat') loadRiwayat();
+            if(tab==='monitoring') loadMonitoring();
         }
 
         function setSidebarState(collapsed) {
@@ -4500,8 +4291,8 @@ html,body{height:100%;}
                     if (res && res.success) {
                         currentUsernameInput = res.username || newUsername.toLowerCase();
                         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({username: currentUsernameInput, sales: currentUser}));
-                        document.getElementById('userBadge').textContent = (currentUsernameInput.toLowerCase() === 'admin') ? 'Role: Admin' : ('Sales: ' + currentUser);
-                        loadOutletForSales(currentUser, currentUsernameInput);
+                        document.getElementById('userBadge').textContent = (currentUsernameInput.toLowerCase() === 'admin') ? 'Role: Admin' : ('CUST.CODE: ' + currentUser);
+                        loadCustomerContext(currentUser, currentUsernameInput);
                         loadRiwayat();
                         showModal('Berhasil', res.message || 'Account berhasil diperbarui.');
                     } else {
@@ -4528,83 +4319,6 @@ html,body{height:100%;}
                 }
             });
         }
-
-        function kirimSemuaOrder() {
-        if (isSubmitting) return;
-
-        let outlet = $('#inputOutlet').val();
-        if (!outlet) {
-            showModal("Peringatan", "Pilih outlet terlebih dahulu!");
-            return;
-        }
-        if (shoppingCart.length === 0) {
-            showModal("Peringatan", "Keranjang masih kosong!");
-            return;
-        }
-
-        // Variabel currentUser menyimpan nama Sales dari hasil login sukses
-        let payload = {
-            sales: currentUser, // <--- KOLOM E (DSR) AKAN MENGAMBIL DARI SINI
-            outlet: outlet,
-            custCode: document.getElementById('inputCustCode').value,
-            channel: document.getElementById('inputChannel').value,
-            tanggal: document.getElementById('inputTanggal').value,
-            payment: $('#inputPayment').val(),
-            disc: document.getElementById('inputDisc').value,
-            note: document.getElementById('inputNote').value,
-            cashback: $('#cashbackSelect').val(), // <-- Memastikan nilai cashback ikut terkirim
-            items: shoppingCart
-        };
-
-        showModal("Konfirmasi Order", "Kirim order sekarang?", true, function(isOk) {
-            if (isOk) {
-                isSubmitting = true;
-                let btnKirim = document.getElementById('btnKirimOrder');
-                if(btnKirim) {
-                    btnKirim.disabled = true;
-                    btnKirim.classList.add('opacity-50', 'cursor-not-allowed');
-                }
-                showLoading(true);
-
-                google.script.run
-                    .withSuccessHandler(function(res) {
-                        showLoading(false);
-                        isSubmitting = false;
-                        if(btnKirim) {
-                            btnKirim.disabled = false;
-                            btnKirim.classList.remove('opacity-50', 'cursor-not-allowed');
-                        }
-
-                        if (res.success) {
-                            shoppingCart = [];
-                            globalRiwayatData = [];
-                            rawMonitoringDataObject = {};
-                            globalOutletKontrakData = [];
-                            pencapaianCache = {};
-                            renderCart();
-                            $('#inputOutlet').val(''); refreshSelect2('#inputOutlet');
-                            onOutletChange();
-                            loadRiwayat();
-                            switchTab('riwayat');
-                            showModal("Berhasil", res.message);
-                        } else {
-                            showModal("Gagal", res.message);
-                        }
-                    })
-                    .withFailureHandler(function(err) {
-                        showLoading(false);
-                        isSubmitting = false;
-                        if(btnKirim) {
-                            btnKirim.disabled = false;
-                            btnKirim.classList.remove('opacity-50', 'cursor-not-allowed');
-                        }
-                        showModal("Error Sistem", err.message);
-                    })
-                    .simpanMultiOrder(payload);
-            }
-        });
-    }
-
 
         /* =========================================================
            TAMBAH CUSTOMER - TABLE / CRUD
