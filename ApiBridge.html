@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="id">
+<head><meta charset="UTF-8"><title>Castrol API Bridge</title></head>
+<body>
+<script>
+(function () {
+  'use strict';
+  window.parent.postMessage({ source: 'castrol-apps-script', type: 'ready' }, '*');
+  window.addEventListener('message', function (event) {
+    var msg = event.data || {};
+    if (msg.source !== 'castrol-github' || !msg.requestId || !msg.method) return;
+    var args = Array.isArray(msg.args) ? msg.args : [];
+    var runner = google.script.run
+      .withSuccessHandler(function (result) {
+        event.source.postMessage({ source:'castrol-apps-script', requestId:msg.requestId, ok:true, result:result }, event.origin || '*');
+      })
+      .withFailureHandler(function (error) {
+        event.source.postMessage({ source:'castrol-apps-script', requestId:msg.requestId, ok:false, error:error && error.message ? error.message : String(error) }, event.origin || '*');
+      });
+    try { runner.apiDispatch(msg.method, args); }
+    catch (err) {
+      event.source.postMessage({ source:'castrol-apps-script', requestId:msg.requestId, ok:false, error:err && err.message ? err.message : String(err) }, event.origin || '*');
+    }
+  });
+})();
+</script>
+</body>
+</html>
