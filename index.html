@@ -2980,6 +2980,9 @@ html, body {
                 const pointShown=Number(item.pointQuarterTotal||0);
                 const pointKartonShown=Number(item.pointQuarterKarton||0);
                 const contractVolume=Number(item.contractVolumeAchieved||0);
+                const contractTarget=Number(item.contractTarget||0);
+                const contractGap=contractVolume-contractTarget;
+                const contractAch=contractTarget>0?(contractVolume/contractTarget)*100:0;
                 const contractPeriod=(item.contractStart&&item.contractEnd) ? (item.contractStart+' s/d '+item.contractEnd) : 'Periode kontrak belum tersedia';
                 const categoryRows=allCats.slice(0,6).map(function(r){return `<div class="monitoring-category-row"><span class="cat-name">${escapeHtml(r.kategori||'Lainnya')}</span><span class="cat-number">${formatNumberID(r.volume,1)}</span><span class="cat-number">${formatNumberID(r.karton,1)}</span><span class="cat-rate">${formatNumberID(r.pointRate,1)}</span><strong>${formatNumberID(r.point,1)} pt</strong></div>`;}).join('');
                 html+=`<div class="monitoring-outlet-card">
@@ -3011,7 +3014,19 @@ html, body {
                             <div class="grid grid-cols-4 gap-2 mt-3">
                                 <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
                                     <div class="text-[8px] font-bold text-slate-400 uppercase">Target</div>
-                                    <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${formatNumberID(Number(item.targetQuarterLiter||0),1)}</div>
+                                    <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${formatNumberID(contractTarget,1)}</div>
+                                </div>
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Actual</div>
+                                    <div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${formatNumberID(contractVolume,1)}</div>
+                                </div>
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Gap</div>
+                                    <div class="text-[11px] font-extrabold ${contractGap >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5">${formatNumberID(contractGap,1)}</div>
+                                </div>
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Ach %</div>
+                                    <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div>
                                 </div>
                                 <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
                                     <div class="text-[8px] font-bold text-emerald-600 uppercase">Actual</div>
@@ -3061,6 +3076,9 @@ html, body {
             const ach=target>0?(actual/target)*100:0;
             const pointQuarter=Number(data.pointQuarterTotal||0), pointVol=Number(data.pointQuarterVolume||0), pointKarton=Number(data.pointQuarterKarton||0);
             const contractVolume=Number(data.contractVolumeAchieved||0);
+            const contractTarget=Number(data.contractTarget||0);
+            const contractGap=contractVolume-contractTarget;
+            const contractAch=contractTarget>0?(contractVolume/contractTarget)*100:0;
             const hasBwsContract = data.hasBwsContract !== false && !!(data.contractStart || data.contractEnd);
             const bwsDisplay = hasBwsContract ? '' : 'display:none';
             const contractPeriod=(data.contractStart&&data.contractEnd) ? (data.contractStart+' s/d '+data.contractEnd) : 'Periode kontrak belum tersedia';
@@ -3084,8 +3102,13 @@ html, body {
                     </div>
                     <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3" style="${bwsDisplay}">
                         <div class="text-[8px] font-extrabold uppercase tracking-wide text-emerald-700">PENCAPAIAN VOLUME KONTRAK</div>
-                        <div class="text-lg font-extrabold text-emerald-800 mt-1">${formatNumberID(contractVolume,1)}</div>
-                        <div class="text-[8px] text-slate-500 mt-1">Volume DAMEN kolom P • periode ${escapeHtml(contractPeriod)}</div>
+                        <div class="text-[8px] text-slate-500 mt-1">Target dari DATA OUTLET BWS kolom G • Actual dari DAMEN kolom P • periode ${escapeHtml(contractPeriod)}</div>
+                        <div class="grid grid-cols-4 gap-2 mt-3">
+                            <div class="rounded-lg bg-white/80 border border-emerald-100 p-2"><div class="text-[8px] font-bold text-slate-400 uppercase">Target</div><div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${formatNumberID(contractTarget,1)}</div></div>
+                            <div class="rounded-lg bg-white/80 border border-emerald-100 p-2"><div class="text-[8px] font-bold text-slate-400 uppercase">Actual</div><div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${formatNumberID(contractVolume,1)}</div></div>
+                            <div class="rounded-lg bg-white/80 border border-emerald-100 p-2"><div class="text-[8px] font-bold text-slate-400 uppercase">Gap</div><div class="text-[11px] font-extrabold ${contractGap >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5">${formatNumberID(contractGap,1)}</div></div>
+                            <div class="rounded-lg bg-white/80 border border-emerald-100 p-2"><div class="text-[8px] font-bold text-slate-400 uppercase">Ach %</div><div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div></div>
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2" style="${bwsDisplay}">
                         <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-2.5"><div class="text-[8px] text-indigo-500 font-bold">POINT TRIP KONTRAK</div><div class="text-lg font-extrabold text-indigo-800 mt-1">${formatNumberID(pointQuarter,1)} pt</div><div class="text-[8px] text-indigo-500 mt-1">${escapeHtml((data.contractStart||'-') + ' s/d ' + (data.contractEnd||'-'))}</div></div>
