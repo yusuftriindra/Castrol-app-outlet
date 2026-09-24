@@ -1431,7 +1431,7 @@ html, body {
                     <span class="header-action-icon">⚙️</span><span class="header-action-text">Account</span>
                 </button>
                 <button type="button" onclick="logout()" id="headerLogoutBtn" class="header-action-btn header-action-danger" title="Logout" aria-label="Logout">
-                    <span class="header-action-icon">↪️</span><span class="header-action-text">Logout</span>
+                    <span class="header-action-icon">➥</span><span class="header-action-text">Logout</span>
                 </button>
             </div>
         </header>
@@ -2936,7 +2936,7 @@ html, body {
             const countBadge = document.getElementById('monitoringCount');
             const pointYearBadge = document.getElementById('monitoringPointYear');
 
-            if (pointYearBadge) pointYearBadge.textContent = 'Point Tahun ' + (String(selectedQuarter).split(' ')[1] || '');
+            if (pointYearBadge) pointYearBadge.textContent = 'Point ' + (String(selectedQuarter).split(' ')[1] || '');
 
             if (!selectedQuarter || !rawMonitoringDataObject[selectedQuarter]) {
                 if (container) container.innerHTML = '<div class="text-slate-400 text-center py-8 bg-white border border-slate-200 rounded-2xl">Belum ada data untuk kuartal ini.</div>';
@@ -3051,7 +3051,7 @@ html, body {
   </div>
   <div class="monitoring-point-metrics">
     <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Volume</div><div class="monitoring-point-metric-value">${formatNumberID(item.pointQuarterVolume,1)}</div></div>
-    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton (Roda 4 Volume ÷ 12 Roda 2 Volume ÷ 9,6)</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
+    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton (Roda 4 : Volume ÷ 12 | Roda 2 : Volume ÷ 9,6)</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
   </div>
   ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
   <div class="monitoring-point-formula"></div>
