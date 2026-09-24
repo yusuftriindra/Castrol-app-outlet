@@ -1950,6 +1950,14 @@ html,body{height:100%;}
                 const state = JSON.parse(raw);
                 if (!state || !state.username || !(state.custCode || state.sales)) return false;
 
+                // Sesi Admin lama tidak boleh dipulihkan karena login hanya untuk CUST.CODE
+                // yang terdaftar pada sheet OUTLET.
+                if (String(state.username || '').trim().toLowerCase() === 'admin' ||
+                    String(state.custCode || '').trim().toLowerCase() === 'admin') {
+                    clearAuthState();
+                    return false;
+                }
+
                 currentUsernameInput = String(state.username).trim();
                 currentUser = String(state.custCode || state.sales).trim();
 
@@ -2067,6 +2075,10 @@ html,body{height:100%;}
         function handleLogin(e) {
             e.preventDefault();
             currentUsernameInput = document.getElementById('loginUser').value.trim();
+            if (currentUsernameInput.toLowerCase() === 'admin') {
+                showModal('Login Gagal', 'Login Admin tidak diperbolehkan. Silakan gunakan CUST.CODE yang terdaftar pada sheet OUTLET.');
+                return;
+            }
             showLoading(true);
             google.script.run.withSuccessHandler(function(res) {
                 showLoading(false);
