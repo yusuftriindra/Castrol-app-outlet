@@ -2961,7 +2961,7 @@ html, body {
             if(summary){
                 summary.innerHTML=`
                     <div class="monitoring-summary-card"><div class="monitoring-summary-label">Actual Quartal</div><div class="monitoring-summary-value">${formatNumberID(totalActual,1)} dus</div><div class="text-[8px] text-slate-400 mt-1">Target ${formatNumberID(totalTarget,1)} dus • ${formatPercentID(totalAch)}</div></div>
-                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Point Trip Kontrak</div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Berdasarkan START s/d END • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
+                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Point Trip Tahun</div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Total seluruh transaksi tahun berjalan • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
                 `;
             }
 
@@ -3013,9 +3013,9 @@ html, body {
                         <div class="monitoring-point-box" style="${item.hasBwsContract ? '' : 'display:none'}">
   <div class="monitoring-point-head">
     <div>
-      <div class="monitoring-point-title">Point Trip Periode Kontrak</div>
-      <div class="monitoring-point-subtitle">Berdasarkan START s/d END DATA OUTLET BWS • sumber DAMEN</div>
-      <div class="monitoring-point-subtitle">Periode: ${escapeHtml((item.contractStart||'-') + ' s/d ' + (item.contractEnd||'-'))}</div>
+      <div class="monitoring-point-title">Point Trip Tahun</div>
+      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun • sumber DAMEN</div>
+      <div class="monitoring-point-subtitle">Perhitungan: seluruh transaksi dalam tahun berjalan</div>
     </div>
     <div class="monitoring-point-total-wrap">
       <div class="monitoring-point-total-label">Total Point</div>
@@ -3023,11 +3023,11 @@ html, body {
     </div>
   </div>
   <div class="monitoring-point-metrics">
-    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Volume Periode Kontrak</div><div class="monitoring-point-metric-value">${formatNumberID(item.pointQuarterVolume,1)}</div></div>
+    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Volume Tahun</div><div class="monitoring-point-metric-value">${formatNumberID(item.pointQuarterVolume,1)}</div></div>
     <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton ekuivalen</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
   </div>
   ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
-  <div class="monitoring-point-formula"><b>Periode hitung:</b> transaksi DAMEN hanya yang tanggalnya berada di START s/d END DATA OUTLET BWS. <b>Rumus:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
+  <div class="monitoring-point-formula"><b>Periode hitung:</b> seluruh transaksi DAMEN dalam tahun berjalan. <b>Rumus:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
 </div>
                     </div></div>`;
             });
