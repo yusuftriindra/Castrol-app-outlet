@@ -1509,9 +1509,15 @@ html,body{height:100%;}
                                 </div>
                             </div>
 
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <label for="inputNote" class="block text-[10px] font-extrabold text-slate-700 mb-1.5">Note</label>
+                                <textarea id="inputNote" rows="2" placeholder="Tulis note untuk order..." class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                                <div class="text-[9px] text-slate-400 mt-1">Note akan disimpan ke kolom J (NOTE ORDER) pada sheet PO OUTLET.</div>
+                            </div>
+
                         </div>
                     </div>
-                    <input type="hidden" id="inputOutlet"><input type="hidden" id="inputCustCode"><input type="hidden" id="inputChannel"><input type="hidden" id="inputTanggal"><input type="hidden" id="inputPayment" value="CASH"><input type="hidden" id="inputDisc" value="0%"><input type="hidden" id="inputNote" value="-"><select id="cashbackSelect" class="hidden"><option value=""></option></select>
+                    <input type="hidden" id="inputOutlet"><input type="hidden" id="inputCustCode"><input type="hidden" id="inputChannel"><input type="hidden" id="inputTanggal"><input type="hidden" id="inputPayment" value="CASH"><input type="hidden" id="inputDisc" value="0%"><select id="cashbackSelect" class="hidden"><option value=""></option></select>
                 </div>
 
                 <div id="tabTambahCustomer" class="tab-content hidden space-y-4">
@@ -2290,7 +2296,7 @@ html,body{height:100%;}
                 tanggal: document.getElementById('inputTanggal').value || new Date().toISOString().slice(0,10),
                 payment: 'CASH',
                 disc: '0%',
-                note: '-',
+                note: (document.getElementById('inputNote').value || '').trim() || '-',
                 cashback: '',
                 items: shoppingCart
             };
@@ -2306,7 +2312,7 @@ html,body{height:100%;}
                         showLoading(false); isSubmitting=false;
                         if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
                         if(res && res.success){
-                            shoppingCart=[]; renderCart();
+                            shoppingCart=[]; renderCart(); const noteEl=document.getElementById('inputNote'); if(noteEl) noteEl.value='';
                             globalRiwayatData=[];
                             loadCustomerContext(custCode);
                             loadRiwayat(true,true);
