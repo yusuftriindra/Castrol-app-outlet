@@ -2387,10 +2387,10 @@ html, body {
                         '<div class="flex items-center justify-between gap-2 mb-2"><div class="text-[9px] font-extrabold text-slate-700">' + escapeHtml(m.label || '-') + '</div>' +
                         (isCurrent ? '<span class="text-[7px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">Bulan Ini</span>' : '') + '</div>' +
                         '<div class="grid grid-cols-2 gap-2">' +
-                        '<div><div class="text-[8px] text-slate-400">Target</div><div class="text-[11px] font-extrabold text-slate-800 mt-0.5">' + formatOrderAchievementNumber(m.target) + ' dus</div></div>' +
-                        '<div><div class="text-[8px] text-slate-400">Actual</div><div class="text-[11px] font-extrabold text-emerald-700 mt-0.5">' + formatOrderAchievementNumber(m.actual) + ' dus</div></div>' +
+                        '<div><div class="text-[8px] text-slate-400">Target</div><div class="text-[11px] font-extrabold text-slate-800 mt-0.5">' + formatOrderAchievementNumber(m.target) + ' L</div></div>' +
+                        '<div><div class="text-[8px] text-slate-400">Actual</div><div class="text-[11px] font-extrabold text-emerald-700 mt-0.5">' + formatOrderAchievementNumber(m.actual) + ' L</div></div>' +
                         '</div>' +
-                        '<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100"><span class="text-[8px] text-slate-400">Gap</span><span class="text-[8px] font-extrabold ' + (gap >= 0 ? 'text-emerald-700' : 'text-red-600') + '">' + formatOrderAchievementNumber(gap) + ' dus</span>' +
+                        '<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100"><span class="text-[8px] text-slate-400">Gap</span><span class="text-[8px] font-extrabold ' + (gap >= 0 ? 'text-emerald-700' : 'text-red-600') + '">' + formatOrderAchievementNumber(gap) + ' L</span>' +
                         '<span class="text-[8px] text-slate-400">Ach</span><span class="text-[8px] font-extrabold text-slate-700">' + (Number(m.target || 0) > 0 ? ach.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%' : '-') + '</span></div>' +
                         '</div>';
                 }).join('');
@@ -2412,7 +2412,9 @@ html, body {
                 renderOrderAchievement(data || {});
             }).withFailureHandler(function(err){
                 const el=document.getElementById('orderAchievementMonths');
-                if(el) el.innerHTML='<div class="sm:col-span-3 rounded-xl border border-red-100 bg-red-50 p-3 text-[9px] text-red-500 text-center">Gagal memuat target & actual order.</div>';
+                if(el) el.innerHTML='<div class="sm:col-span-3 rounded-xl border border-red-100 bg-red-50 p-3 text-[9px] text-red-500 text-center">Gagal memuat target & actual order: '+escapeHtml(err && err.message ? err.message : 'Terjadi kesalahan.')+'</div>';
+                const q=document.getElementById('orderAchievementQuarter');
+                if(q) q.textContent='Gagal memuat quartal';
             }).getOrderTargetActual(custCode);
         }
 
