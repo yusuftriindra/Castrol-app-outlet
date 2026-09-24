@@ -2404,10 +2404,10 @@ html, body {
                         '<div class="flex items-center justify-between gap-1 mb-1.5"><div class="text-[8px] font-extrabold text-slate-700 whitespace-nowrap">' + escapeHtml(m.label || '-') + '</div>' +
                         (isCurrent ? '<span class="text-[6px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded-full">INI</span>' : '') + '</div>' +
                         '<div class="grid grid-cols-2 gap-1.5">' +
-                        '<div><div class="text-[7px] text-slate-400">Target</div><div class="text-[10px] font-extrabold text-slate-800 mt-0.5">' + formatOrderAchievementNumber(m.target) + ' L</div></div>' +
-                        '<div><div class="text-[7px] text-slate-400">Actual</div><div class="text-[10px] font-extrabold text-emerald-700 mt-0.5">' + formatOrderAchievementNumber(m.actual) + ' L</div></div>' +
+                        '<div><div class="text-[7px] text-slate-400">Target</div><div class="text-[10px] font-extrabold text-slate-800 mt-0.5">' + formatOrderAchievementNumber(m.target) + ' dus</div></div>' +
+                        '<div><div class="text-[7px] text-slate-400">Actual</div><div class="text-[10px] font-extrabold text-emerald-700 mt-0.5">' + formatOrderAchievementNumber(m.actual) + ' dus</div></div>' +
                         '</div>' +
-                        '<div class="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100 gap-1"><span class="text-[7px] text-slate-400">Gap</span><span class="text-[7px] font-extrabold ' + (gap >= 0 ? 'text-emerald-700' : 'text-red-600') + '">' + formatOrderAchievementNumber(gap) + ' L</span>' +
+                        '<div class="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100 gap-1"><span class="text-[7px] text-slate-400">Gap</span><span class="text-[7px] font-extrabold ' + (gap >= 0 ? 'text-emerald-700' : 'text-red-600') + '">' + formatOrderAchievementNumber(gap) + ' dus</span>' +
                         '<span class="text-[7px] text-slate-400">Ach</span><span class="text-[7px] font-extrabold text-slate-700">' + (Number(m.target || 0) > 0 ? ach.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%' : '-') + '</span></div>' +
                         '</div>';
                 }).join('');
