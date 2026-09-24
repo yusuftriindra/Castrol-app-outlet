@@ -1679,6 +1679,12 @@ html, body {
                         <select id="filterRiwayatYear" onchange="filterRiwayat()" class="min-h-[38px] border border-slate-200 rounded-xl px-3 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                             <option value="">Semua Tahun</option>
                         </select>
+                        <select id="filterRiwayatStatus" onchange="filterRiwayat()" class="min-h-[38px] border border-slate-200 rounded-xl px-3 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Semua Status</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="APPROVE">APPROVE</option>
+                            <option value="DECLINE">DECLINE</option>
+                        </select>
                         <button type="button" onclick="resetRiwayatDateFilter()" class="min-h-[38px] px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[10px] font-bold">RESET</button>
                     </div>
 
@@ -3163,9 +3169,11 @@ html, body {
             const monthEl = document.getElementById('filterRiwayatMonth');
             const yearEl = document.getElementById('filterRiwayatYear');
             const dsrEl = document.getElementById('filterRiwayatDsr');
+            const statusEl = document.getElementById('filterRiwayatStatus');
             const month = String(monthEl && monthEl.value || '');
             const year = String(yearEl && yearEl.value || '');
             const dsr = String(dsrEl && dsrEl.value || '').trim().toUpperCase();
+            const status = String(statusEl && statusEl.value || '').trim().toUpperCase();
             const clearBtn = document.getElementById('clearSearchBtn');
             if (clearBtn) clearBtn.classList.toggle('hidden', !keyword);
             let filtered = (globalRiwayatData || []).filter(function(item) {
@@ -3176,6 +3184,7 @@ html, body {
                 if (month && (!ym || ym[2] !== month)) return false;
                 if (year && (!ym || ym[1] !== year)) return false;
                 if (dsr && String(item.dsr || '').trim().toUpperCase() !== dsr) return false;
+                if (status && String(item.status || 'PENDING').trim().toUpperCase() !== status) return false;
                 return true;
             });
             filtered.sort(function(a,b){ return new Date(String(b.tanggal||'')).getTime() - new Date(String(a.tanggal||'')).getTime(); });
@@ -3186,8 +3195,10 @@ html, body {
         function resetRiwayatDateFilter() {
             const month = document.getElementById('filterRiwayatMonth');
             const year = document.getElementById('filterRiwayatYear');
+            const status = document.getElementById('filterRiwayatStatus');
             if (month) month.value = '';
             if (year) year.value = '';
+            if (status) status.value = '';
             filterRiwayat();
         }
 
