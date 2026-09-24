@@ -1766,7 +1766,7 @@ html, body {
                     <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
                         <div>
                             <div class="text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">MONITORING OUTLET</div>
-                            <h2 class="text-base font-extrabold text-slate-800 mt-0.5">Monitoring Kuartal & Point Trip</h2>
+                            <h2 class="text-base font-extrabold text-slate-800 mt-0.5"></h2>
                             <p class="text-[9px] text-slate-400 mt-0.5"></p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -3102,7 +3102,7 @@ html, body {
             if(summary){
                 summary.innerHTML=`
                     <div class="monitoring-summary-card"><div class="monitoring-summary-label">Actual Quartal</div><div class="monitoring-summary-value">${formatNumberID(totalActual,1)} dus</div><div class="text-[8px] text-slate-400 mt-1">Target ${formatNumberID(totalTarget,1)} dus • ${formatPercentID(totalAch)}</div></div>
-                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Point Trip Tahun</div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Total seluruh transaksi tahun berjalan • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
+                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Point Trip</div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Total seluruh transaksi tahun berjalan • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
                 `;
             }
 
@@ -3145,7 +3145,7 @@ html, body {
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Pencapaian Volume</div>
-                                    <div class="text-[8px] text-slate-500 mt-0.5">DAMEN kolom P • berdasarkan Start s/d End DATA OUTLET BWS</div>
+                                    <div class="text-[8px] text-slate-500 mt-0.5"></div>
                                 </div>
                                 <div class="text-right shrink-0">
                                     <div class="text-base font-extrabold text-emerald-800">${formatNumberID(contractVolume,1)}</div>
@@ -3170,14 +3170,14 @@ html, body {
                                     <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div>
                                 </div>
                             </div>
-                            <div class="text-[8px] text-slate-500 mt-2">Periode: ${escapeHtml(contractPeriod)} • Satuan target/actual: Volume DAMEN</div>
+                            <div class="text-[8px] text-slate-500 mt-2"></div>
                         </div>
                         <div class="monitoring-point-box" style="${item.hasBwsContract ? '' : 'display:none'}">
   <div class="monitoring-point-head">
     <div>
-      <div class="monitoring-point-title">Point Trip Tahun</div>
-      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun • sumber DAMEN</div>
-      <div class="monitoring-point-subtitle">Perhitungan: seluruh transaksi dalam tahun berjalan</div>
+      <div class="monitoring-point-title">Point Trip</div>
+      <div class="monitoring-point-subtitle"></div>
+      <div class="monitoring-point-subtitle"></div>
     </div>
     <div class="monitoring-point-total-wrap">
       <div class="monitoring-point-total-label">Total Point</div>
@@ -3186,10 +3186,10 @@ html, body {
   </div>
   <div class="monitoring-point-metrics">
     <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Volume Tahun</div><div class="monitoring-point-metric-value">${formatNumberID(item.pointQuarterVolume,1)}</div></div>
-    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton ekuivalen</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
+    <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
   </div>
   ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
-  <div class="monitoring-point-formula"><b>Periode hitung:</b> seluruh transaksi DAMEN dalam tahun berjalan. <b>Rumus:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
+  <div class="monitoring-point-formula"></div>
 </div>
                     </div></div>`;
             });
@@ -3221,7 +3221,7 @@ html, body {
                     <div class="rounded-xl bg-gradient-to-r from-slate-900 to-emerald-900 text-white p-3">
                         <div class="text-[9px] uppercase tracking-wider text-emerald-300 font-bold">Outlet Monitoring</div>
                         <div class="text-sm font-extrabold mt-1">${escapeHtml(data.outlet||'-')}</div>
-                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')} • Actual DAMEN</div>
+                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')}</div>
                     </div>
                     <div class="modal-detail-summary">
                         <div class="modal-stat-card"><div class="modal-stat-label">Target</div><div class="modal-stat-value">${formatNumberID(target,1)} dus</div></div>
@@ -3231,7 +3231,7 @@ html, body {
                     </div>
                     <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3" style="${bwsDisplay}">
                         <div class="text-[8px] font-extrabold uppercase tracking-wide text-emerald-700">PENCAPAIAN VOLUME KONTRAK</div>
-                        <div class="text-[8px] text-slate-500 mt-1">Target dari DATA OUTLET BWS kolom G • Actual dari DAMEN kolom P • periode ${escapeHtml(contractPeriod)}</div>
+                        <div class="text-[8px] text-slate-500 mt-1">Target dari DATA OUTLET BWS kolom G • Actual dari • periode ${escapeHtml(contractPeriod)}</div>
                         <div class="grid grid-cols-4 gap-2 mt-3">
                             <div class="rounded-lg bg-white/80 border border-emerald-100 p-2"><div class="text-[8px] font-bold text-slate-400 uppercase">Target</div><div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${formatNumberID(contractTarget,1)}</div></div>
                             <div class="rounded-lg bg-white/80 border border-emerald-100 p-2"><div class="text-[8px] font-bold text-slate-400 uppercase">Actual</div><div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${formatNumberID(contractVolume,1)}</div></div>
