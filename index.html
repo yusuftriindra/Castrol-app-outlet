@@ -70,7 +70,7 @@
                         window[callbackName] = succeed;
                         script.async = true;
                         script.onerror = function () {
-                            fail(new Error('Tidak dapat mengakses Apps Script. Pastikan Web App di-deploy dengan Execute as: Me dan Who has access: Anyone.'));
+                            fail(new Error('Klik saja OK'));
                         };
 
                         let encodedArgs = '';
