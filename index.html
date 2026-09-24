@@ -1543,26 +1543,32 @@ html, body {
                             </div>
 
                             <!-- TARGET & PENCAPAIAN ORDER QUARTAL BERJALAN -->
-                            <div id="orderAchievementCard" class="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-3.5 shadow-sm">
-                                <div class="flex items-center justify-between gap-2 mb-3">
-                                    <div>
+                            <div id="orderAchievementCard" class="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-3 shadow-sm">
+                                <div class="flex items-center justify-between gap-2 mb-2.5">
+                                    <div class="min-w-0">
                                         <div class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Target & Pencapaian Order</div>
-                                        <div id="orderAchievementQuarter" class="text-[9px] text-slate-400 mt-0.5">Memuat quartal berjalan...</div>
+                                        <div id="orderAchievementQuarter" class="text-[8px] text-slate-400 mt-0.5 truncate">Memuat quartal berjalan...</div>
                                     </div>
-                                    <button type="button" onclick="loadOrderAchievement(true)" class="shrink-0 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[9px] font-extrabold text-emerald-700 hover:bg-emerald-50">↻ Refresh</button>
+                                    <button type="button" onclick="loadOrderAchievement(true)" class="shrink-0 rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-[8px] font-extrabold text-emerald-700 hover:bg-emerald-50">↻ Refresh</button>
                                 </div>
-                                <div id="orderAchievementMonths" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <div class="rounded-xl border border-slate-200 bg-white p-2.5 text-[9px] text-slate-400">Memuat target & actual...</div>
+
+                                <!-- Ringkas 3 bulan agar tidak memanjang di HP -->
+                                <div id="orderAchievementMonths" class="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory">
+                                    <div class="min-w-[142px] flex-1 snap-start rounded-xl border border-slate-200 bg-white p-2.5 text-[8px] text-slate-400">Memuat...</div>
                                 </div>
-                                <div id="orderAchievementTotal" class="mt-2 rounded-xl border border-emerald-200 bg-white p-3">
-                                    <div class="text-[9px] font-extrabold uppercase tracking-wider text-emerald-700">Total Quartal Saat Ini</div>
-                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                                        <div><div class="text-[8px] text-slate-400">Target</div><div id="orderTotalTarget" class="text-xs font-extrabold text-slate-800">-</div></div>
-                                        <div><div class="text-[8px] text-slate-400">Actual</div><div id="orderTotalActual" class="text-xs font-extrabold text-emerald-700">-</div></div>
-                                        <div><div class="text-[8px] text-slate-400">Gap</div><div id="orderTotalGap" class="text-xs font-extrabold text-slate-700">-</div></div>
-                                        <div><div class="text-[8px] text-slate-400">Ach %</div><div id="orderTotalAch" class="text-xs font-extrabold text-slate-700">-</div></div>
+
+                                <!-- Total quartal dibuat lebih ringkas -->
+                                <div id="orderAchievementTotal" class="mt-2 rounded-xl border border-emerald-200 bg-white px-3 py-2.5">
+                                    <div class="flex items-center justify-between gap-2 mb-2">
+                                        <div class="text-[9px] font-extrabold uppercase tracking-wider text-emerald-700">Total Quartal</div>
+                                        <span class="text-[8px] text-slate-400">Q berjalan</span>
                                     </div>
-                                    <div class="text-[8px] text-slate-400 mt-2">Target = TARGET QUARTER LITER / TARGET MONTHLY LITER. Actual = APPROVE + order PENDING dalam liter. Order DECLINE tidak dihitung.</div>
+                                    <div class="grid grid-cols-4 gap-1.5">
+                                        <div class="rounded-lg bg-slate-50 px-2 py-1.5"><div class="text-[7px] text-slate-400">Target</div><div id="orderTotalTarget" class="text-[10px] font-extrabold text-slate-800 mt-0.5">-</div></div>
+                                        <div class="rounded-lg bg-emerald-50 px-2 py-1.5"><div class="text-[7px] text-slate-400">Actual</div><div id="orderTotalActual" class="text-[10px] font-extrabold text-emerald-700 mt-0.5">-</div></div>
+                                        <div class="rounded-lg bg-slate-50 px-2 py-1.5"><div class="text-[7px] text-slate-400">Gap</div><div id="orderTotalGap" class="text-[10px] font-extrabold text-slate-700 mt-0.5">-</div></div>
+                                        <div class="rounded-lg bg-slate-50 px-2 py-1.5"><div class="text-[7px] text-slate-400">Ach</div><div id="orderTotalAch" class="text-[10px] font-extrabold text-slate-700 mt-0.5">-</div></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2383,26 +2389,26 @@ html, body {
             const quarterEl = document.getElementById('orderAchievementQuarter');
             const monthsEl = document.getElementById('orderAchievementMonths');
             const total = data && data.total ? data.total : {target:0,actual:0,gap:0,ach:0};
-            if (quarterEl) quarterEl.textContent = data && data.quarter ? String(data.quarter) + ' • Target LITER dari sheet TARGET OUTLET' : 'Quartal berjalan';
+            if (quarterEl) quarterEl.textContent = data && data.quarter ? String(data.quarter) + ' • Target LITER dari TARGET OUTLET' : 'Quartal berjalan';
             if (!monthsEl) return;
             const months = Array.isArray(data && data.months) ? data.months : [];
             const currentMonth = Number(data && data.currentMonth);
             if (!months.length) {
-                monthsEl.innerHTML = '<div class="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3 text-[9px] text-slate-400 text-center">Target belum tersedia untuk quartal ini.</div>';
+                monthsEl.innerHTML = '<div class="min-w-full rounded-xl border border-slate-200 bg-white p-2.5 text-[8px] text-slate-400 text-center">Target belum tersedia untuk quartal ini.</div>';
             } else {
                 monthsEl.innerHTML = months.map(function(m) {
                     const isCurrent = Number(m.month) === currentMonth;
                     const gap = Number(m.gap || 0);
                     const ach = Number(m.ach || 0);
-                    return '<div class="rounded-xl border ' + (isCurrent ? 'border-emerald-300 bg-emerald-50/70' : 'border-slate-200 bg-white') + ' p-2.5">' +
-                        '<div class="flex items-center justify-between gap-2 mb-2"><div class="text-[9px] font-extrabold text-slate-700">' + escapeHtml(m.label || '-') + '</div>' +
-                        (isCurrent ? '<span class="text-[7px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">Bulan Ini</span>' : '') + '</div>' +
-                        '<div class="grid grid-cols-2 gap-2">' +
-                        '<div><div class="text-[8px] text-slate-400">Target</div><div class="text-[11px] font-extrabold text-slate-800 mt-0.5">' + formatOrderAchievementNumber(m.target) + ' L</div></div>' +
-                        '<div><div class="text-[8px] text-slate-400">Actual</div><div class="text-[11px] font-extrabold text-emerald-700 mt-0.5">' + formatOrderAchievementNumber(m.actual) + ' L</div></div>' +
+                    return '<div class="min-w-[142px] flex-1 snap-start rounded-xl border ' + (isCurrent ? 'border-emerald-300 bg-emerald-50/80' : 'border-slate-200 bg-white') + ' p-2.5">' +
+                        '<div class="flex items-center justify-between gap-1 mb-1.5"><div class="text-[8px] font-extrabold text-slate-700 whitespace-nowrap">' + escapeHtml(m.label || '-') + '</div>' +
+                        (isCurrent ? '<span class="text-[6px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded-full">INI</span>' : '') + '</div>' +
+                        '<div class="grid grid-cols-2 gap-1.5">' +
+                        '<div><div class="text-[7px] text-slate-400">Target</div><div class="text-[10px] font-extrabold text-slate-800 mt-0.5">' + formatOrderAchievementNumber(m.target) + ' L</div></div>' +
+                        '<div><div class="text-[7px] text-slate-400">Actual</div><div class="text-[10px] font-extrabold text-emerald-700 mt-0.5">' + formatOrderAchievementNumber(m.actual) + ' L</div></div>' +
                         '</div>' +
-                        '<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100"><span class="text-[8px] text-slate-400">Gap</span><span class="text-[8px] font-extrabold ' + (gap >= 0 ? 'text-emerald-700' : 'text-red-600') + '">' + formatOrderAchievementNumber(gap) + ' L</span>' +
-                        '<span class="text-[8px] text-slate-400">Ach</span><span class="text-[8px] font-extrabold text-slate-700">' + (Number(m.target || 0) > 0 ? ach.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%' : '-') + '</span></div>' +
+                        '<div class="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100 gap-1"><span class="text-[7px] text-slate-400">Gap</span><span class="text-[7px] font-extrabold ' + (gap >= 0 ? 'text-emerald-700' : 'text-red-600') + '">' + formatOrderAchievementNumber(gap) + ' L</span>' +
+                        '<span class="text-[7px] text-slate-400">Ach</span><span class="text-[7px] font-extrabold text-slate-700">' + (Number(m.target || 0) > 0 ? ach.toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%' : '-') + '</span></div>' +
                         '</div>';
                 }).join('');
             }
@@ -2412,7 +2418,7 @@ html, body {
             const achEl=document.getElementById('orderTotalAch');
             if(targetEl) targetEl.textContent=formatOrderAchievementNumber(total.target)+' L';
             if(actualEl) actualEl.textContent=formatOrderAchievementNumber(total.actual)+' L';
-            if(gapEl){gapEl.textContent=formatOrderAchievementNumber(total.gap)+' L';gapEl.className='text-xs font-extrabold '+(Number(total.gap||0)>=0?'text-emerald-700':'text-red-600');}
+            if(gapEl){gapEl.textContent=formatOrderAchievementNumber(total.gap)+' L';gapEl.className='text-[10px] font-extrabold '+(Number(total.gap||0)>=0?'text-emerald-700':'text-red-600')+' mt-0.5';}
             if(achEl) achEl.textContent=Number(total.target||0)>0?Number(total.ach||0).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'-';
         }
 
