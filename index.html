@@ -1520,7 +1520,7 @@ html, body {
                             <div class="flex items-center justify-between gap-3">
                                 <div class="min-w-0">
                                     <div class="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-600">INPUT ORDER</div>
-                                    <h2 class="text-lg font-extrabold text-slate-800 mt-0.5">Buat Order</h2>
+                                    <h2 class="text-lg font-extrabold text-slate-800 mt-0.5"></h2>
                                     <p class="text-[10px] text-slate-400 mt-1"></p>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
@@ -1577,7 +1577,7 @@ html, body {
                             <div class="rounded-xl border border-slate-200 bg-white p-3">
                                 <label for="inputNote" class="block text-[10px] font-extrabold text-slate-700 mb-1.5">Note</label>
                                 <textarea id="inputNote" rows="2" placeholder="Tulis note untuk order..." class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-xs resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
-                                <div class="text-[9px] text-slate-400 mt-1">Note akan disimpan ke kolom J (NOTE ORDER) pada sheet PO OUTLET.</div>
+                                <div class="text-[9px] text-slate-400 mt-1">Beri pesan untuk Order anda, agar Sales Notice.</div>
                             </div>
 
                         </div>
@@ -1671,7 +1671,7 @@ html, body {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
-                        <div class="text-[10px] font-extrabold text-slate-500 mr-1">SORT TANGGAL</div>
+                        <div class="text-[10px] font-extrabold text-slate-500 mr-1">Filter</div>
                         <select id="filterRiwayatMonth" onchange="filterRiwayat()" class="min-h-[38px] border border-slate-200 rounded-xl px-3 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                             <option value="">Semua Bulan</option>
                             <option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option><option value="04">April</option><option value="05">Mei</option><option value="06">Juni</option><option value="07">Juli</option><option value="08">Agustus</option><option value="09">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
@@ -1736,7 +1736,7 @@ html, body {
                     <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
                         <div>
                             <div class="text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">MONITORING OUTLET</div>
-                            <h2 class="text-base font-extrabold text-slate-800 mt-0.5">Monitoring Kuartal & Point Trip</h2>
+                            <h2 class="text-base font-extrabold text-slate-800 mt-0.5"></h2>
                             <p class="text-[9px] text-slate-400 mt-0.5"></p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -2511,7 +2511,7 @@ html, body {
             modalBody.innerHTML = '<div class="space-y-3 text-xs">' +
                 '<div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><div class="text-[9px] font-bold uppercase tracking-wider text-emerald-600">OUTLET</div><div class="text-sm font-extrabold text-slate-800 mt-0.5">' + escapeHtml(payload.outlet || '-') + '</div><div class="text-[9px] text-slate-500 mt-1">Payment: <b>' + escapeHtml(payload.payment || 'CASH') + '</b></div></div>' +
                 '<div><div class="text-[10px] font-extrabold text-slate-700 mb-2">Produk dalam keranjang (' + products.length + ')</div><div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">' + productHtml + '</div></div>' +
-                '<div class="rounded-xl bg-slate-900 text-white p-3 text-[10px] font-bold">Setelah klik OK, WhatsApp akan langsung dibuka dan order diproses di sistem.</div>' +
+                '<div class="rounded-xl bg-slate-900 text-white p-3 text-[10px] font-bold">Apakah anda yakin dengan Pesanan anda? Jika iya Klik OK, Kirim.</div>' +
                 '</div>';
             modalCancelBtn.style.display = 'inline-block';
             modalOkBtn.textContent = 'OK, KIRIM';
@@ -2967,7 +2967,7 @@ html, body {
             if(summary){
                 summary.innerHTML=`
                     <div class="monitoring-summary-card"><div class="monitoring-summary-label">Actual Quartal</div><div class="monitoring-summary-value">${formatNumberID(totalActual,1)} dus</div><div class="text-[8px] text-slate-400 mt-1">Target ${formatNumberID(totalTarget,1)} dus • ${formatPercentID(totalAch)}</div></div>
-                    <div class="monitoring-summary-card"><div class="monitoring-summary-label">Point Trip Tahun</div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Total seluruh transaksi tahun berjalan • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
+                    <div class="monitoring-summary-card"><div class="monitoring-summary-label"></div><div class="monitoring-summary-value" style="color:#4338a3">${formatNumberID(totalPoint,2)} pt</div><div class="text-[8px] text-slate-400 mt-1">Total seluruh transaksi tahun berjalan • ${formatNumberID(totalPointKarton,2)} dus ekuivalen</div></div>
                 `;
             }
 
@@ -2992,7 +2992,7 @@ html, body {
                 const contractPeriod=(item.contractStart&&item.contractEnd) ? (item.contractStart+' s/d '+item.contractEnd) : 'Periode kontrak belum tersedia';
                 const categoryRows=allCats.slice(0,6).map(function(r){return `<div class="monitoring-category-row"><span class="cat-name">${escapeHtml(r.kategori||'Lainnya')}</span><span class="cat-number">${formatNumberID(r.volume,1)}</span><span class="cat-number">${formatNumberID(r.karton,1)}</span><span class="cat-rate">${formatNumberID(r.pointRate,1)}</span><strong>${formatNumberID(r.point,1)} pt</strong></div>`;}).join('');
                 html+=`<div class="monitoring-outlet-card">
-                    <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)} • Actual DAMEN</div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
+                    <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)}</div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
                     <div class="monitoring-card-body">
                         <div class="monitoring-kpi-grid">
                             <div class="monitoring-kpi"><div class="monitoring-kpi-label">Target Quartal</div><div class="monitoring-kpi-value">${formatNumberID(target,1)} dus</div></div>
@@ -3010,7 +3010,7 @@ html, body {
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Pencapaian Volume</div>
-                                    <div class="text-[8px] text-slate-500 mt-0.5">DAMEN kolom P • berdasarkan Start s/d End DATA OUTLET BWS</div>
+                                    <div class="text-[8px] text-slate-500 mt-0.5">Berdasarkan Periode Kontrak anda.</div>
                                 </div>
                                 <div class="text-right shrink-0">
                                     <div class="text-base font-extrabold text-emerald-800">${formatNumberID(contractVolume,1)}</div>
@@ -3035,14 +3035,14 @@ html, body {
                                     <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div>
                                 </div>
                             </div>
-                            <div class="text-[8px] text-slate-500 mt-2">Periode: ${escapeHtml(contractPeriod)} • Satuan target/actual: Volume DAMEN</div>
+                            <div class="text-[8px] text-slate-500 mt-2">Periode: ${escapeHtml(contractPeriod)}</div>
                         </div>
                         <div class="monitoring-point-box" style="${item.hasBwsContract ? '' : 'display:none'}">
   <div class="monitoring-point-head">
     <div>
-      <div class="monitoring-point-title">Point Trip Tahun</div>
-      <div class="monitoring-point-subtitle">Total seluruh transaksi dalam tahun • sumber DAMEN</div>
-      <div class="monitoring-point-subtitle">Perhitungan: seluruh transaksi dalam tahun berjalan</div>
+      <div class="monitoring-point-title">Point Trip Year to Date</div>
+      <div class="monitoring-point-subtitle">Perhitungan mengikuti Periode Tahun yang anda pilih.</div>
+      <div class="monitoring-point-subtitle"></div>
     </div>
     <div class="monitoring-point-total-wrap">
       <div class="monitoring-point-total-label">Total Point</div>
@@ -3054,7 +3054,7 @@ html, body {
     <div class="monitoring-point-metric"><div class="monitoring-point-metric-label">Karton ekuivalen</div><div class="monitoring-point-metric-value">${formatNumberID(pointKartonShown,1)} dus</div></div>
   </div>
   ${categoryRows ? `<div class="monitoring-category-title">Rincian Point per Kategori</div><div class="monitoring-category-header"><span>Kategori</span><span style="text-align:right">Volume</span><span style="text-align:right">Karton</span><span style="text-align:right">Rate</span><span style="text-align:right">Point</span></div>${categoryRows}` : '<div class="text-[9px] text-slate-400 py-3 text-center">Belum ada Point Trip pada tahun ini.</div>'}
-  <div class="monitoring-point-formula"><b>Periode hitung:</b> seluruh transaksi DAMEN dalam tahun berjalan. <b>Rumus:</b> Volume ÷ faktor karton sesuai channel × Point Rate kategori. BP/MCO-4T = ÷ 9,6 • CAS/PCO = ÷ 12.</div>
+  <div class="monitoring-point-formula"></div>
 </div>
                     </div></div>`;
             });
@@ -3086,7 +3086,7 @@ html, body {
                     <div class="rounded-xl bg-gradient-to-r from-slate-900 to-emerald-900 text-white p-3">
                         <div class="text-[9px] uppercase tracking-wider text-emerald-300 font-bold">Outlet Monitoring</div>
                         <div class="text-sm font-extrabold mt-1">${escapeHtml(data.outlet||'-')}</div>
-                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')} • Actual DAMEN</div>
+                        <div class="text-[9px] text-slate-300 mt-1">${escapeHtml(data.dayVisit||'-')} • ${escapeHtml(data.quarter||'-')}</div>
                     </div>
                     <div class="modal-detail-summary">
                         <div class="modal-stat-card"><div class="modal-stat-label">Target</div><div class="modal-stat-value">${formatNumberID(target,1)} dus</div></div>
