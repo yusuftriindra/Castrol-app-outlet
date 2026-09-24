@@ -1531,10 +1531,15 @@ html, body {
                         </div>
 
                         <div class="p-4 space-y-3">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-xl bg-slate-50 border border-slate-200 p-3">
-                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">CUST.CODE</div><div id="customerInputCustCode" class="mt-1 text-sm font-extrabold text-slate-800">-</div></div>
-                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">OUTLET</div><div id="customerInputOutlet" class="mt-1 text-xs font-bold text-slate-700">-</div></div>
-                                <div><div class="text-[8px] uppercase tracking-wider font-bold text-slate-400">CHANNEL</div><div id="customerInputChannel" class="mt-1 text-xs font-bold text-slate-700">-</div></div>
+                            <div class="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-4 shadow-sm">
+                                <div class="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-emerald-100/60"></div>
+                                <div class="relative flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-2xl bg-emerald-700 text-white flex items-center justify-center text-lg shadow-sm">🏪</div>
+                                    <div class="min-w-0">
+                                        <div class="text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">OUTLET ORDER</div>
+                                        <div id="customerInputOutlet" class="mt-0.5 text-base sm:text-lg font-extrabold text-slate-800 truncate">-</div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
@@ -1552,6 +1557,20 @@ html, body {
                                 <div class="hidden" aria-hidden="true">
                                     <span id="grandVol">0</span>
                                     <span id="grandVal">0</span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <div>
+                                        <div class="text-[10px] font-extrabold text-slate-700">Payment</div>
+                                        <div class="text-[9px] text-slate-400 mt-0.5">Pilih metode pembayaran</div>
+                                    </div>
+                                    <span class="text-[9px] font-bold text-emerald-600">WAJIB DIPILIH</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" id="paymentCashBtn" onclick="setPayment('CASH')" class="rounded-xl border bg-slate-900 text-white border-slate-900 py-2.5 text-xs font-extrabold transition">💵 Cash</button>
+                                    <button type="button" id="paymentCreditBtn" onclick="setPayment('CREDIT')" class="rounded-xl border bg-white text-slate-600 border-slate-200 py-2.5 text-xs font-extrabold transition">💳 Credit</button>
                                 </div>
                             </div>
 
@@ -2146,9 +2165,8 @@ html, body {
                 document.getElementById('inputOutlet').value = ctx.outlet || '';
                 document.getElementById('inputChannel').value = ctx.channel || '';
                 document.getElementById('inputTanggal').value = new Date().toISOString().slice(0,10);
-                const cc=document.getElementById('customerInputCustCode'); if(cc) cc.textContent=ctx.custCode || code;
                 const oo=document.getElementById('customerInputOutlet'); if(oo) oo.textContent=ctx.outlet || '-';
-                const ch=document.getElementById('customerInputChannel'); if(ch) ch.textContent=ctx.channel || '-';
+                setPayment(document.getElementById('inputPayment').value || 'CASH');
             }).withFailureHandler(function(err){ showModal('Gagal','Gagal memuat data CUST.CODE: '+(err&&err.message?err.message:'Terjadi kesalahan.')); }).getCustomerByCustCode(code);
         }
 
@@ -2303,53 +2321,96 @@ html, body {
             inactive.forEach(c => other.classList.add(c));
         }
 
+        function showOrderConfirmation(payload) {
+            const modalBody = document.getElementById('modalBody');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSubtitle = document.getElementById('modalSubtitle');
+            const modalCancelBtn = document.getElementById('modalCancelBtn');
+            const modalOkBtn = document.getElementById('modalOkBtn');
+            const products = Array.isArray(payload.items) ? payload.items : [];
+            const productHtml = products.map(function(item, i) {
+                const qty = Number(item.qty || 0);
+                const unit = String(item.satuan || 'Pcs');
+                const totalPcs = unit.toUpperCase() === 'DUS' ? qty * (Number(item.pack) || 1) : qty;
+                return '<div class="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5">' +
+                    '<div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-[9px] font-extrabold shrink-0">' + (i + 1) + '</div>' +
+                    '<div class="min-w-0 flex-1"><div class="text-[10px] font-extrabold text-slate-800 break-words">' + escapeHtml(item.produk || '-') + '</div>' +
+                    '<div class="text-[9px] text-slate-500 mt-0.5">Qty ' + qty + ' ' + escapeHtml(unit) + ' · ' + totalPcs + ' Pcs</div></div></div>';
+            }).join('');
+            modalTitle.textContent = 'Konfirmasi Order';
+            modalSubtitle.textContent = 'Periksa kembali sebelum dikirim';
+            modalBody.innerHTML = '<div class="space-y-3 text-xs">' +
+                '<div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><div class="text-[9px] font-bold uppercase tracking-wider text-emerald-600">OUTLET</div><div class="text-sm font-extrabold text-slate-800 mt-0.5">' + escapeHtml(payload.outlet || '-') + '</div><div class="text-[9px] text-slate-500 mt-1">Payment: <b>' + escapeHtml(payload.payment || 'CASH') + '</b></div></div>' +
+                '<div><div class="text-[10px] font-extrabold text-slate-700 mb-2">Produk dalam keranjang (' + products.length + ')</div><div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">' + productHtml + '</div></div>' +
+                '<div class="rounded-xl bg-slate-900 text-white p-3 text-[10px] font-bold">Setelah klik OK, WhatsApp akan langsung dibuka dan order diproses di sistem.</div>' +
+                '</div>';
+            modalCancelBtn.style.display = 'inline-block';
+            modalOkBtn.textContent = 'OK, KIRIM';
+            document.getElementById('customModal').style.display = 'flex';
+            modalCallback = function(isOk) {
+                if (isOk) prosesKirimOrder(payload);
+            };
+        }
+
+        function prosesKirimOrder(payload) {
+            if (isSubmitting) return;
+            isSubmitting = true;
+            const btnKirim = document.getElementById('btnKirimOrder');
+            if(btnKirim){btnKirim.disabled=true;btnKirim.classList.add('opacity-50','cursor-not-allowed');}
+
+            // Buka WhatsApp seketika dari data yang sudah ada di keranjang.
+            // Karena dipanggil langsung dari klik OK, browser tidak perlu menunggu server.
+            try {
+                const lines = (payload.items || []).map(function(item){
+                    return '- ' + String(item.produk || '-') + ' - ' + Number(item.qty || 0) + ' ' + String(item.satuan || 'Pcs');
+                });
+                const waMessage = '*' + String(payload.outlet || '-') + '*\n' + lines.join('\n');
+                const waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(waMessage);
+                window.open(waUrl, '_blank');
+            } catch (e) {}
+
+            google.script.run
+                .withSuccessHandler(function(res){
+                    isSubmitting=false;
+                    if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
+                    if(res && res.success){
+                        shoppingCart=[]; renderCart();
+                        const noteEl=document.getElementById('inputNote'); if(noteEl) noteEl.value='';
+                        setPayment('CASH');
+                        globalRiwayatData=[];
+                        loadCustomerContext(payload.custCode);
+                        loadRiwayat(true,true);
+                        switchTab('riwayat');
+                    }else{
+                        showModal('Gagal',res&&res.message?res.message:'Order gagal disimpan.');
+                    }
+                })
+                .withFailureHandler(function(err){
+                    isSubmitting=false;
+                    if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
+                    showModal('Error Sistem',err&&err.message?err.message:'Terjadi kesalahan.');
+                })
+                .simpanMultiOrder(payload);
+        }
+
         function kirimSemuaOrder() {
             if (isSubmitting) return;
-            // Identitas customer pada Input selalu berasal dari CUST.CODE login.
-            // Outlet dan Channel diambil dari context login yang sudah dimuat.
-
             const custCode = String(currentUser || currentUsernameInput || '').trim();
             if (!custCode || custCode.toLowerCase() === 'admin') { showModal('Peringatan','CUST.CODE belum teridentifikasi.'); return; }
             if (shoppingCart.length === 0) { showModal('Peringatan','Keranjang masih kosong!'); return; }
-
+            const payment = String(document.getElementById('inputPayment').value || 'CASH').toUpperCase();
             const payload = {
                 custCode: custCode,
                 outlet: $('#inputOutlet').val() || '',
                 channel: document.getElementById('inputChannel').value || '',
                 tanggal: document.getElementById('inputTanggal').value || new Date().toISOString().slice(0,10),
-                payment: 'CASH',
+                payment: payment === 'CREDIT' ? 'CREDIT' : 'CASH',
                 disc: '0%',
                 note: (document.getElementById('inputNote').value || '').trim() || '-',
                 cashback: '',
-                items: shoppingCart
+                items: shoppingCart.map(function(x){ return Object.assign({}, x); })
             };
-
-            showModal('Konfirmasi Order', 'Kirim order sekarang?', true, function(isOk) {
-                if (!isOk) return;
-                isSubmitting = true;
-                const btnKirim = document.getElementById('btnKirimOrder');
-                if(btnKirim){btnKirim.disabled=true;btnKirim.classList.add('opacity-50','cursor-not-allowed');}
-                showLoading(true);
-                google.script.run
-                    .withSuccessHandler(function(res){
-                        showLoading(false); isSubmitting=false;
-                        if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
-                        if(res && res.success){
-                            shoppingCart=[]; renderCart(); const noteEl=document.getElementById('inputNote'); if(noteEl) noteEl.value='';
-                            globalRiwayatData=[];
-                            loadCustomerContext(custCode);
-                            loadRiwayat(true,true);
-                            switchTab('riwayat');
-                            showModal('Berhasil',res.message);
-                        }else{ showModal('Gagal',res&&res.message?res.message:'Order gagal disimpan.'); }
-                    })
-                    .withFailureHandler(function(err){
-                        showLoading(false); isSubmitting=false;
-                        if(btnKirim){btnKirim.disabled=false;btnKirim.classList.remove('opacity-50','cursor-not-allowed');}
-                        showModal('Error Sistem',err&&err.message?err.message:'Terjadi kesalahan.');
-                    })
-                    .simpanMultiOrder(payload);
-            });
+            showOrderConfirmation(payload);
         }
 
         function loadRiwayat(forceReload, silentRefresh) {
@@ -3055,82 +3116,64 @@ html, body {
         }
 
         function kirimUlangWA(idInput) {
-            // Tutup detail Riwayat terlebih dahulu saat tombol WA diklik.
-            const detailModal = document.getElementById('customModal');
-            if (detailModal) {
-                detailModal.style.display = 'none';
-            }
-
-            // Jangan tampilkan loading overlay untuk aksi WA agar klik terasa instan.
-            // Proses server tetap berjalan di background dan hanya membuka WhatsApp
-            // setelah URL berhasil diterima.
-            google.script.run
-                .withSuccessHandler(function(res) {
-                    if (res && res.whatsappUrl) {
-                        window.open(res.whatsappUrl, '_blank');
-                    } else {
-                        showModal("Informasi", (res && res.message) || "Gagal memuat link WhatsApp untuk order " + idInput);
-                    }
-                })
-                .withFailureHandler(function(err) {
-                    showModal("Error Sistem", err && err.message ? err.message : "Gagal memuat link WhatsApp untuk order " + idInput);
-                })
-                .getWhatsAppUrlById(idInput);
+            const id = String(idInput || '').trim();
+            if (!id || id === '-') return;
+            const item = (globalRiwayatData || []).find(function(x){ return String(x.id || '').trim() === id; });
+            if (!item) { showModal('Informasi','Data transaksi belum tersedia. Silakan refresh Riwayat.'); return; }
+            const products = Array.isArray(item.products) ? item.products : [];
+            const message = '*' + String(item.outlet || '-') + '*\n' + products.map(function(p){ return '- ' + String(p || '-'); }).join('\n');
+            const url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(message);
+            window.open(url, '_blank');
         }
 
 
         function editRiwayat(idInput){
             editingOrderId=String(idInput||'').trim();
             if(!editingOrderId||editingOrderId==='-')return;
+            const cached = (globalRiwayatData || []).find(function(x){ return String(x.id || '').trim() === editingOrderId; });
+            if(!cached){ showModal('Informasi','Data transaksi belum tersedia. Silakan refresh Riwayat.'); return; }
+
             document.getElementById('modalTitle').textContent='EDIT ORDER';
             document.getElementById('modalSubtitle').textContent='ID INPUT: '+editingOrderId;
-            document.getElementById('modalBody').innerHTML='<div class="text-center text-xs text-slate-500 py-8">Memuat data order...</div>';
             document.getElementById('modalCancelBtn').style.display='inline-block';
             document.getElementById('modalOkBtn').textContent='Simpan Perubahan';
+            editOrderItems = (Array.isArray(cached.products) ? cached.products : []).map(function(text){
+                const raw=String(text||'').trim();
+                const m=raw.match(/^(.*)\s-\s(\d+(?:[.,]\d+)?)\s+(PCS|DUS)$/i);
+                const name=m?m[1].trim():raw;
+                const qty=m?Number(String(m[2]).replace(',','.')):1;
+                const satuan=m?String(m[3]).replace(/^./,function(c){return c.toUpperCase();}):'Pcs';
+                const found=(produkDataList||[]).find(function(p){return String(p.nama||'').trim().toUpperCase()===name.toUpperCase();})||{};
+                return {produk:name,kode:found.kode||'',qty:qty,satuan:satuan,pack:Number(found.pack)||1,harga:Number(found.harga)||0,liter:Number(found.liter)||1};
+            });
+            renderEditOrderForm(cached);
             document.getElementById('customModal').style.display='flex';
             modalCallback=function(ok){if(ok)simpanEditOrder();};
-
-            google.script.run
-                .withSuccessHandler(function(res){
-                    if(!res||!res.success){
-                        document.getElementById('modalOkBtn').textContent='OK';
-                        showModal('Gagal',res&&res.message?res.message:'Order tidak dapat dimuat.');
-                        return;
-                    }
-                    editOrderItems=res.order.products||[];
-
-                    // V6: pastikan master PRODUK tersedia sebelum membuat <select> edit.
-                    // Pada Admin, produk tidak dimuat saat login demi performa, sehingga
-                    // produkDataList bisa kosong dan semua produk akan dianggap tidak valid.
-                    if(Array.isArray(produkDataList) && produkDataList.length>0){
-                        renderEditOrderForm(res.order);
-                        return;
-                    }
-
-                    google.script.run
-                        .withSuccessHandler(function(list){
-                            produkDataList=Array.isArray(list)?list:[];
-                            renderEditOrderForm(res.order);
-                        })
-                        .withFailureHandler(function(err){
-                            document.getElementById('modalOkBtn').textContent='OK';
-                            document.getElementById('modalBody').innerHTML='<div class="text-center text-xs text-red-500 py-8">Gagal memuat master produk: '+escapeHtml(err&&err.message?err.message:'Terjadi kesalahan.')+'</div>';
-                        })
-                        .getListProduk();
-                })
-                .withFailureHandler(function(err){
-                    document.getElementById('modalOkBtn').textContent='OK';
-                    showModal('Gagal',err&&err.message?err.message:'Gagal memuat order.');
-                })
-                .getEditableOrderById(editingOrderId,currentUser,currentUsernameInput);
         }
-        function getEditOutletOptions(selected){let html='<option value="">-- Pilih Outlet --</option>',seen={};(outletDataList||[]).forEach(function(o){let n=String(o.outlet||'').trim();if(n&&!seen[n]){seen[n]=1;html+='<option value="'+escapeHtml(n)+'" '+(n===String(selected||'')?'selected':'')+'>'+escapeHtml(n)+'</option>';}});if(selected&&!seen[String(selected)])html='<option value="'+escapeHtml(selected)+'" selected>'+escapeHtml(selected)+'</option>'+html.slice(html.indexOf('</option>')+9);return html;}
         function getEditProductOptions(selected,selectedKode){let html='<option value="">-- Pilih Produk --</option>';let selectedText=String(selected||'').trim();let selectedCode=String(selectedKode||'').trim();let found=false;(produkDataList||[]).forEach(function(p){let n=String(p.nama||'').trim();if(!n)return;let kode=String(p.kode||'').trim();let isSelected=(selectedText&&n===selectedText)||(selectedCode&&kode===selectedCode);if(isSelected)found=true;html+='<option value="'+escapeHtml(n)+'" '+(isSelected?'selected':'')+'>'+escapeHtml(n)+' ('+Number(p.liter||0)+'L | Rp '+Number(p.harga||0).toLocaleString('id-ID')+')</option>';});if(selectedText&&!found){html+='<option value="'+escapeHtml(selectedText)+'" selected>'+escapeHtml(selectedText)+' (Produk saat ini)</option>';}return html;}
-        function renderEditOrderProducts(){let b=document.getElementById('editProducts');if(!b)return;if(!editOrderItems.length){b.innerHTML='<div class="text-xs text-slate-400 text-center py-3">Belum ada produk.</div>';return;}b.innerHTML=editOrderItems.map(function(it,i){return '<div class="border border-slate-200 rounded-lg p-2 mb-2 bg-slate-50"><div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center"><select id="editProd'+i+'" class="sm:col-span-7 w-full border rounded p-2 bg-white text-xs">'+getEditProductOptions(it.produk,it.kode)+'</select><input id="editQty'+i+'" type="number" min="1" value="'+Number(it.qty||1)+'" class="sm:col-span-2 w-full border rounded p-2 text-xs"><select id="editUnit'+i+'" class="sm:col-span-2 w-full border rounded p-2 bg-white text-xs"><option value="Pcs" '+(String(it.satuan).toUpperCase()==='PCS'?'selected':'')+'>Pcs</option><option value="Dus" '+(String(it.satuan).toUpperCase()==='DUS'?'selected':'')+'>Dus</option></select><button type="button" onclick="removeEditProduct('+i+')" class="sm:col-span-1 text-red-600 bg-red-50 border border-red-200 rounded p-2">✕</button></div></div>';}).join('');}
+        function renderEditOrderProducts(){let b=document.getElementById('editProducts');if(!b)return;if(!editOrderItems.length){b.innerHTML='<div class="text-xs text-slate-400 text-center py-3">Belum ada produk.</div>';return;}b.innerHTML=editOrderItems.map(function(it,i){return '<div class="border border-slate-200 rounded-xl p-2.5 mb-2 bg-slate-50"><div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center"><select id="editProd'+i+'" class="sm:col-span-7 w-full border rounded-xl p-2.5 bg-white text-xs">'+getEditProductOptions(it.produk,it.kode)+'</select><input id="editQty'+i+'" type="number" min="1" value="'+Number(it.qty||1)+'" class="sm:col-span-2 w-full border rounded-xl p-2.5 text-xs"><select id="editUnit'+i+'" class="sm:col-span-2 w-full border rounded-xl p-2.5 bg-white text-xs"><option value="Pcs" '+(String(it.satuan).toUpperCase()==='PCS'?'selected':'')+'>Pcs</option><option value="Dus" '+(String(it.satuan).toUpperCase()==='DUS'?'selected':'')+'>Dus</option></select><button type="button" onclick="removeEditProduct('+i+')" class="sm:col-span-1 text-red-600 bg-red-50 border border-red-200 rounded-xl p-2.5">✕</button></div></div>';}).join('');}
         function addEditProduct(){editOrderItems.push({produk:'',qty:1,satuan:'Pcs'});renderEditOrderProducts();}
         function removeEditProduct(i){editOrderItems.splice(i,1);renderEditOrderProducts();}
-        function renderEditOrderForm(o){let cb=document.getElementById('cashbackSelect'),opts='<option value="">-- Pilih Cashback --</option>';if(cb)Array.from(cb.options).forEach(function(x){if(x.value)opts+='<option value="'+escapeHtml(x.value)+'" '+(x.value===String(o.cashback||'')?'selected':'')+'>'+escapeHtml(x.textContent)+'</option>';});document.getElementById('modalBody').innerHTML='<div class="space-y-3 text-xs"><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="font-semibold">Outlet<select id="editOutlet" class="w-full border rounded p-2 bg-white mt-1">'+getEditOutletOptions(o.outlet)+'</select></label><label class="font-semibold">Tanggal<input id="editTanggal" type="date" value="'+escapeHtml(o.tanggal||'')+'" class="w-full border rounded p-2 mt-1"></label><label class="font-semibold">Payment<input id="editPayment" value="'+escapeHtml(o.payment||'')+'" class="w-full border rounded p-2 mt-1"></label><label class="font-semibold">Disc<input id="editDisc" value="'+escapeHtml(o.disc||'')+'" class="w-full border rounded p-2 mt-1"></label><label class="font-semibold">Cust.Code<input id="editCustCode" value="'+escapeHtml(o.custCode||'')+'" class="w-full border rounded p-2 mt-1"></label><label class="font-semibold">Channel<input id="editChannel" value="'+escapeHtml(o.channel||'')+'" class="w-full border rounded p-2 mt-1"></label><label class="font-semibold sm:col-span-2">Cashback<select id="editCashback" class="w-full border rounded p-2 bg-white mt-1">'+opts+'</select></label><label class="font-semibold sm:col-span-2">Note Order<textarea id="editNote" rows="2" class="w-full border rounded p-2 mt-1">'+escapeHtml(o.note||'')+'</textarea></label></div><div class="border-t pt-3"><div class="flex justify-between items-center mb-2"><b>Produk</b><button type="button" onclick="addEditProduct()" class="bg-emerald-600 text-white rounded px-3 py-1.5 text-[10px] font-bold">+ Tambah Produk</button></div><div id="editProducts"></div></div></div>';renderEditOrderProducts();}
-        function simpanEditOrder(){if(!editingOrderId)return;let items=[];for(let i=0;i<editOrderItems.length;i++){let p=document.getElementById('editProd'+i),q=document.getElementById('editQty'+i),u=document.getElementById('editUnit'+i);if(!p||!p.value||!q||Number(q.value)<=0){showModal('Peringatan','Produk dan Qty harus diisi dengan benar.');return;}var originalName=editOrderItems[i]&&editOrderItems[i].produk?String(editOrderItems[i].produk).trim():'';var originalCode=editOrderItems[i]&&editOrderItems[i].kode?String(editOrderItems[i].kode).trim():'';var selectedObj=(produkDataList||[]).find(function(x){return String(x.nama||'').trim()===String(p.value||'').trim();})||{};var selectedCode=String(selectedObj.kode||'').trim();var codeToSend=selectedCode||originalCode;items.push({produk:p.value,kode:codeToSend,originalProduk:originalName,originalKode:originalCode,qty:Number(q.value),satuan:u?u.value:'Pcs',harga:Number(selectedObj.harga)||0,liter:Number(selectedObj.liter)||1,pack:Number(selectedObj.pack)||1});}if(!items.length){showModal('Peringatan','Minimal harus ada 1 produk.');return;}showLoading(true);document.getElementById('customModal').style.display='none';let payload={outlet:document.getElementById('editOutlet').value,tanggal:document.getElementById('editTanggal').value,payment:document.getElementById('editPayment').value,disc:document.getElementById('editDisc').value,custCode:document.getElementById('editCustCode').value,channel:document.getElementById('editChannel').value,note:document.getElementById('editNote').value,cashback:document.getElementById('editCashback').value,items:items};google.script.run.withSuccessHandler(function(res){showLoading(false);showModal(res&&res.success?'Berhasil':'Gagal',res&&res.message?res.message:'Tidak ada respons.');if(res&&res.success){editingOrderId='';editOrderItems=[];loadRiwayat(true, true);}}).withFailureHandler(function(err){showLoading(false);showModal('Gagal',err&&err.message?err.message:'Gagal menyimpan perubahan.');}).updateOrderById(editingOrderId,payload,currentUser,currentUsernameInput);}
+        function renderEditOrderForm(o){document.getElementById('modalBody').innerHTML='<div class="space-y-3 text-xs"><div><div class="flex justify-between items-center mb-2"><b class="text-slate-700">Produk</b><button type="button" onclick="addEditProduct()" class="bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-bold">+ Tambah Produk</button></div><div id="editProducts"></div></div><div class="border-t pt-3"><label class="font-semibold text-slate-700">Note Order<textarea id="editNote" rows="3" class="w-full border border-slate-200 rounded-xl p-2.5 mt-1.5 resize-none">'+escapeHtml(o.note||'')+'</textarea></label></div></div>';renderEditOrderProducts();}
+        function simpanEditOrder(){
+            if(!editingOrderId)return;
+            let items=[];
+            for(let i=0;i<editOrderItems.length;i++){
+                let p=document.getElementById('editProd'+i),q=document.getElementById('editQty'+i),u=document.getElementById('editUnit'+i);
+                if(!p||!p.value||!q||Number(q.value)<=0){showModal('Peringatan','Produk dan Qty harus diisi dengan benar.');return;}
+                var originalName=editOrderItems[i]&&editOrderItems[i].produk?String(editOrderItems[i].produk).trim():'';
+                var originalCode=editOrderItems[i]&&editOrderItems[i].kode?String(editOrderItems[i].kode).trim():'';
+                var selectedObj=(produkDataList||[]).find(function(x){return String(x.nama||'').trim()===String(p.value||'').trim();})||{};
+                var selectedCode=String(selectedObj.kode||'').trim();
+                var codeToSend=selectedCode||originalCode;
+                items.push({produk:p.value,kode:codeToSend,originalProduk:originalName,originalKode:originalCode,qty:Number(q.value),satuan:u?u.value:'Pcs',harga:Number(selectedObj.harga)||0,liter:Number(selectedObj.liter)||1,pack:Number(selectedObj.pack)||1});
+            }
+            if(!items.length){showModal('Peringatan','Minimal harus ada 1 produk.');return;}
+            const noteEl=document.getElementById('editNote');
+            const payload={items:items,note:noteEl?noteEl.value:'-'};
+            document.getElementById('customModal').style.display='none';
+            google.script.run.withSuccessHandler(function(res){if(res&&res.success){editingOrderId='';editOrderItems=[];loadRiwayat(true,true);}else{showModal('Gagal',res&&res.message?res.message:'Tidak ada respons.');}}).withFailureHandler(function(err){showModal('Gagal',err&&err.message?err.message:'Gagal menyimpan perubahan.');}).updateOrderById(editingOrderId,payload,currentUser,currentUsernameInput);
+        }
 
         function updateSelectedRiwayatUI() {
             const count = Object.keys(selectedRiwayatIds).length;
