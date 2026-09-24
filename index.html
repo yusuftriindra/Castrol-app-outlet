@@ -3028,18 +3028,6 @@ html, body {
                                     <div class="text-[8px] font-bold text-slate-400 uppercase">Ach %</div>
                                     <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div>
                                 </div>
-                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
-                                    <div class="text-[8px] font-bold text-emerald-600 uppercase">Actual</div>
-                                    <div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${formatNumberID(contractVolume,1)}</div>
-                                </div>
-                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
-                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Gap</div>
-                                    <div class="text-[11px] font-extrabold ${Number(contractVolume)-Number(item.targetQuarterLiter||0) >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5">${formatNumberID(Number(contractVolume)-Number(item.targetQuarterLiter||0),1)}</div>
-                                </div>
-                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
-                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Ach %</div>
-                                    <div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${Number(item.targetQuarterLiter||0)>0 ? formatPercentID((Number(contractVolume)/Number(item.targetQuarterLiter||0))*100) : '-'}</div>
-                                </div>
                             </div>
                             <div class="text-[8px] text-slate-500 mt-2">Periode: ${escapeHtml(contractPeriod)} • Satuan target/actual: Volume DAMEN</div>
                         </div>
