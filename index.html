@@ -1955,22 +1955,64 @@ html, body {
         let outletBWSFormMasterLoading = false;
 
         const AUTH_STORAGE_KEY = "salesAppAuthState";
+        const AUTH_COOKIE_KEY = "salesAppAuthState";
+
+        function _getAuthStateObject_() {
+            const username = String(currentUsernameInput || "").trim();
+            const custCode = String(currentUser || "").trim();
+            if (!username || !custCode) return null;
+            return { username: username, custCode: custCode, savedAt: Date.now() };
+        }
 
         function saveAuthState() {
+            const state = _getAuthStateObject_();
+            if (!state) return false;
+            const raw = JSON.stringify(state);
+            let saved = false;
             try {
-                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
-                    username: String(currentUsernameInput || "").trim(),
-                    custCode: String(currentUser || "").trim(),
-                    savedAt: Date.now()
-                }));
+                localStorage.setItem(AUTH_STORAGE_KEY, raw);
+                saved = true;
             } catch (e) {
-                console.warn("Gagal menyimpan sesi lokal:", e);
+                console.warn("localStorage tidak tersedia:", e);
             }
+            try {
+                sessionStorage.setItem(AUTH_STORAGE_KEY, raw);
+                saved = true;
+            } catch (e) {
+                console.warn("sessionStorage tidak tersedia:", e);
+            }
+            // Fallback cookie agar sesi tetap ada walaupun browser membatasi Web Storage.
+            try {
+                document.cookie = AUTH_COOKIE_KEY + "=" + encodeURIComponent(raw) + "; max-age=" + (60 * 60 * 24 * 365) + "; path=/; SameSite=Lax";
+                saved = true;
+            } catch (e) {
+                console.warn("Cookie sesi tidak dapat disimpan:", e);
+            }
+            return saved;
+        }
+
+        function _readSavedAuthState_() {
+            const candidates = [];
+            try { candidates.push(localStorage.getItem(AUTH_STORAGE_KEY)); } catch (e) {}
+            try { candidates.push(sessionStorage.getItem(AUTH_STORAGE_KEY)); } catch (e) {}
+            try {
+                const match = document.cookie.match(new RegExp("(?:^|; )" + AUTH_COOKIE_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^;]*)"));
+                if (match) candidates.push(decodeURIComponent(match[1]));
+            } catch (e) {}
+            for (let i = 0; i < candidates.length; i++) {
+                if (!candidates[i]) continue;
+                try {
+                    const parsed = JSON.parse(candidates[i]);
+                    if (parsed && parsed.username && (parsed.custCode || parsed.sales)) return parsed;
+                } catch (e) {}
+            }
+            return null;
         }
 
         function clearAuthState() {
-            try { localStorage.removeItem(AUTH_STORAGE_KEY); }
-            catch (e) { console.warn("Gagal menghapus sesi lokal:", e); }
+            try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
+            try { sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
+            try { document.cookie = AUTH_COOKIE_KEY + "=; max-age=0; path=/; SameSite=Lax"; } catch (e) {}
         }
 
         function applyRoleVisibility() {
@@ -1994,9 +2036,7 @@ html, body {
 
         function restoreAuthState() {
             try {
-                const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-                if (!raw) return false;
-                const state = JSON.parse(raw);
+                const state = _readSavedAuthState_();
                 if (!state || !state.username || !(state.custCode || state.sales)) return false;
 
                 // Sesi Admin lama tidak boleh dipulihkan karena login hanya untuk CUST.CODE
@@ -4431,7 +4471,7 @@ html, body {
                     showLoading(false);
                     if (res && res.success) {
                         currentUsernameInput = res.username || newUsername.toLowerCase();
-                        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({username: currentUsernameInput, sales: currentUser}));
+                        saveAuthState();
                         document.getElementById('userBadge').textContent = (currentUsernameInput.toLowerCase() === 'admin') ? 'Role: Admin' : ('CUST.CODE: ' + currentUser);
                         loadCustomerContext(currentUser, currentUsernameInput);
                         loadRiwayat();
