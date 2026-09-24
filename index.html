@@ -1959,8 +1959,9 @@ html, body {
         function saveAuthState() {
             try {
                 localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
-                    username: currentUsernameInput || "",
-                    custCode: currentUser || ""
+                    username: String(currentUsernameInput || "").trim(),
+                    custCode: String(currentUser || "").trim(),
+                    savedAt: Date.now()
                 }));
             } catch (e) {
                 console.warn("Gagal menyimpan sesi lokal:", e);
@@ -2563,15 +2564,6 @@ html, body {
 
             const bulkControls = isAdmin ? `
                 <div class="flex flex-wrap items-center gap-2 p-3 bg-slate-50 border-b border-slate-200">
-                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white border border-slate-200 cursor-pointer">
-                        <input type="checkbox" id="selectAllRiwayatVisible" onclick="toggleSelectAllRiwayatVisible(true)"
-                            class="w-3.5 h-3.5 accent-emerald-600 cursor-pointer" title="Pilih semua yang tampil">
-                        <span class="text-[10px] font-bold text-slate-600">PILIH SEMUA</span>
-                    </label>
-                    <button type="button" onclick="resetPilihanStatusRiwayat()"
-                        class="px-3 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
-                        RESET
-                    </button>
                     <button type="button" onclick="doneBulkStatusRiwayat()"
                         class="px-4 py-1.5 rounded-md bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-extrabold shadow-sm">
                         DONE
@@ -3185,13 +3177,6 @@ html, body {
                 btn.disabled = false;
             }
 
-            const visibleBoxes = Array.from(document.querySelectorAll('.riwayat-select-checkbox'));
-            const checkedVisible = visibleBoxes.filter(function(cb){ return cb.checked; }).length;
-            const selectAll = document.getElementById('selectAllRiwayatVisible');
-            if (selectAll) {
-                selectAll.checked = visibleBoxes.length > 0 && checkedVisible === visibleBoxes.length;
-                selectAll.indeterminate = checkedVisible > 0 && checkedVisible < visibleBoxes.length;
-            }
         }
 
         function toggleRiwayatSelection(checkbox) {
