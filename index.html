@@ -1956,12 +1956,84 @@ html, body {
 
         const AUTH_STORAGE_KEY = "salesAppAuthState";
         const AUTH_COOKIE_KEY = "salesAppAuthState";
+        const AUTH_DB_NAME = "salesAppAuthDB";
+        const AUTH_DB_STORE = "auth";
+        window.__serverSessionToken = "";
 
         function _getAuthStateObject_() {
             const username = String(currentUsernameInput || "").trim();
             const custCode = String(currentUser || "").trim();
             if (!username || !custCode) return null;
-            return { username: username, custCode: custCode, savedAt: Date.now() };
+            return { username: username, custCode: custCode, sessionToken: String(window.__serverSessionToken || '').trim(), savedAt: Date.now() };
+        }
+
+        function _saveAuthToIndexedDB_(state) {
+            return new Promise(function(resolve) {
+                try {
+                    if (!window.indexedDB) return resolve(false);
+                    const req = indexedDB.open(AUTH_DB_NAME, 1);
+                    req.onupgradeneeded = function(e) {
+                        try {
+                            if (!e.target.result.objectStoreNames.contains(AUTH_DB_STORE)) {
+                                e.target.result.createObjectStore(AUTH_DB_STORE);
+                            }
+                        } catch (err) {}
+                    };
+                    req.onsuccess = function(e) {
+                        try {
+                            const db = e.target.result;
+                            const tx = db.transaction(AUTH_DB_STORE, 'readwrite');
+                            tx.objectStore(AUTH_DB_STORE).put(state, 'current');
+                            tx.oncomplete = function(){ try{db.close();}catch(_e){} resolve(true); };
+                            tx.onerror = function(){ try{db.close();}catch(_e){} resolve(false); };
+                        } catch (err) { resolve(false); }
+                    };
+                    req.onerror = function(){ resolve(false); };
+                } catch (err) { resolve(false); }
+            });
+        }
+
+        function _readAuthFromIndexedDB_() {
+            return new Promise(function(resolve) {
+                try {
+                    if (!window.indexedDB) return resolve(null);
+                    const req = indexedDB.open(AUTH_DB_NAME, 1);
+                    req.onupgradeneeded = function(e) {
+                        try {
+                            if (!e.target.result.objectStoreNames.contains(AUTH_DB_STORE)) {
+                                e.target.result.createObjectStore(AUTH_DB_STORE);
+                            }
+                        } catch (err) {}
+                    };
+                    req.onsuccess = function(e) {
+                        try {
+                            const db = e.target.result;
+                            const tx = db.transaction(AUTH_DB_STORE, 'readonly');
+                            const getReq = tx.objectStore(AUTH_DB_STORE).get('current');
+                            getReq.onsuccess = function(){ const v=getReq.result||null; try{db.close();}catch(_e){} resolve(v); };
+                            getReq.onerror = function(){ try{db.close();}catch(_e){} resolve(null); };
+                        } catch (err) { resolve(null); }
+                    };
+                    req.onerror = function(){ resolve(null); };
+                } catch (err) { resolve(null); }
+            });
+        }
+
+        function _saveAuthToWindowName_(state) {
+            try {
+                window.name = 'SA_AUTH|' + encodeURIComponent(JSON.stringify(state));
+                return true;
+            } catch (e) { return false; }
+        }
+
+        function _readAuthFromWindowName_() {
+            try {
+                const prefix = 'SA_AUTH|';
+                if (String(window.name || '').indexOf(prefix) !== 0) return null;
+                const parsed = JSON.parse(decodeURIComponent(String(window.name).slice(prefix.length)));
+                if (parsed && parsed.username && (parsed.custCode || parsed.sales)) return parsed;
+            } catch (e) {}
+            return null;
         }
 
         function saveAuthState() {
@@ -1969,25 +2041,14 @@ html, body {
             if (!state) return false;
             const raw = JSON.stringify(state);
             let saved = false;
-            try {
-                localStorage.setItem(AUTH_STORAGE_KEY, raw);
-                saved = true;
-            } catch (e) {
-                console.warn("localStorage tidak tersedia:", e);
-            }
-            try {
-                sessionStorage.setItem(AUTH_STORAGE_KEY, raw);
-                saved = true;
-            } catch (e) {
-                console.warn("sessionStorage tidak tersedia:", e);
-            }
-            // Fallback cookie agar sesi tetap ada walaupun browser membatasi Web Storage.
+            try { localStorage.setItem(AUTH_STORAGE_KEY, raw); saved = true; } catch (e) {}
+            try { sessionStorage.setItem(AUTH_STORAGE_KEY, raw); saved = true; } catch (e) {}
             try {
                 document.cookie = AUTH_COOKIE_KEY + "=" + encodeURIComponent(raw) + "; max-age=" + (60 * 60 * 24 * 365) + "; path=/; SameSite=Lax";
                 saved = true;
-            } catch (e) {
-                console.warn("Cookie sesi tidak dapat disimpan:", e);
-            }
+            } catch (e) {}
+            _saveAuthToWindowName_(state);
+            _saveAuthToIndexedDB_(state);
             return saved;
         }
 
@@ -1996,9 +2057,11 @@ html, body {
             try { candidates.push(localStorage.getItem(AUTH_STORAGE_KEY)); } catch (e) {}
             try { candidates.push(sessionStorage.getItem(AUTH_STORAGE_KEY)); } catch (e) {}
             try {
-                const match = document.cookie.match(new RegExp("(?:^|; )" + AUTH_COOKIE_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^;]*)"));
+                const match = document.cookie.match(new RegExp("(?:^|; )" + AUTH_COOKIE_KEY.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&") + "=([^;]*)"));
                 if (match) candidates.push(decodeURIComponent(match[1]));
             } catch (e) {}
+            const windowState = _readAuthFromWindowName_();
+            if (windowState) candidates.push(JSON.stringify(windowState));
             for (let i = 0; i < candidates.length; i++) {
                 if (!candidates[i]) continue;
                 try {
@@ -2013,6 +2076,15 @@ html, body {
             try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
             try { sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
             try { document.cookie = AUTH_COOKIE_KEY + "=; max-age=0; path=/; SameSite=Lax"; } catch (e) {}
+            try { window.name = ''; } catch (e) {}
+            try {
+                if (window.indexedDB) {
+                    const req = indexedDB.open(AUTH_DB_NAME, 1);
+                    req.onsuccess = function(e){
+                        try { const db=e.target.result; const tx=db.transaction(AUTH_DB_STORE,'readwrite'); tx.objectStore(AUTH_DB_STORE).delete('current'); tx.oncomplete=function(){try{db.close();}catch(_e){}}; } catch(_e){}
+                    };
+                }
+            } catch (e) {}
         }
 
         function applyRoleVisibility() {
@@ -2034,21 +2106,76 @@ html, body {
             });
         }
 
-        function restoreAuthState() {
+        async function restoreAuthState() {
             try {
-                const state = _readSavedAuthState_();
+                let state = _readSavedAuthState_();
+                if (!state) state = await _readAuthFromIndexedDB_();
                 if (!state || !state.username || !(state.custCode || state.sales)) return false;
 
-                // Sesi Admin lama tidak boleh dipulihkan karena login hanya untuk CUST.CODE
-                // yang terdaftar pada sheet OUTLET.
                 if (String(state.username || '').trim().toLowerCase() === 'admin' ||
                     String(state.custCode || '').trim().toLowerCase() === 'admin') {
                     clearAuthState();
                     return false;
                 }
 
-                currentUsernameInput = String(state.username).trim();
-                currentUser = String(state.custCode || state.sales).trim();
+                const token = String(state.sessionToken || '').trim();
+                if (token) {
+                    await new Promise(function(resolve) {
+                        google.script.run.withSuccessHandler(function(res) {
+                            if (res && res.success && res.session) {
+                                window.__serverSessionToken = res.token || token;
+                                currentUsernameInput = String(res.session.username || state.username).trim();
+                                currentUser = String(res.session.custCode || state.custCode || state.sales).trim();
+                                saveAuthState();
+                                resolve(true);
+                            } else {
+                                window.__serverSessionToken = '';
+                                resolve(false);
+                            }
+                        }).withFailureHandler(function() {
+                            window.__serverSessionToken = '';
+                            resolve(false);
+                        }).restoreLoginSession(token);
+                    }).then(function(valid) {
+                        if (valid) return true;
+                    });
+                    if (window.__serverSessionToken) {
+                        document.getElementById('loginPage').classList.add('hidden');
+                        document.getElementById('registerPage').classList.add('hidden');
+                        document.getElementById('mainPage').classList.remove('hidden');
+                        document.getElementById('mainHeader').classList.remove('hidden');
+                        document.getElementById('leftNav').classList.remove('hidden');
+                        setSidebarState(true);
+                        applyRoleVisibility();
+                        document.getElementById('userBadge').textContent = 'CUST.CODE: ' + currentUser;
+                        document.getElementById('userBadge').classList.remove('hidden');
+                        const adminTools = document.getElementById('riwayatAdminTools');
+                        if (adminTools) adminTools.classList.add('hidden');
+                        loadCustomerContext(currentUser);
+                        loadRiwayat(true, true);
+                        loadInputMasterData();
+                        return true;
+                    }
+                    clearAuthState();
+                }
+
+                // Migrasi sesi lama: validasi CUST.CODE ke server dan buat server session baru.
+                await new Promise(function(resolve) {
+                    google.script.run.withSuccessHandler(function(res) {
+                        if (res && res.success && res.token) {
+                            window.__serverSessionToken = res.token;
+                            currentUsernameInput = String(state.username).trim();
+                            currentUser = String(res.custCode || state.custCode || state.sales).trim();
+                            saveAuthState();
+                            resolve(true);
+                        } else resolve(false);
+                    }).withFailureHandler(function(){ resolve(false); }).prosesLogin(String(state.custCode || state.sales).trim());
+                });
+
+                if (!window.__serverSessionToken) {
+                    clearAuthState();
+                    return false;
+                }
 
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('registerPage').classList.add('hidden');
@@ -2056,28 +2183,22 @@ html, body {
                 document.getElementById('mainHeader').classList.remove('hidden');
                 document.getElementById('leftNav').classList.remove('hidden');
                 setSidebarState(true);
-
-                const isAdminLogin = currentUsernameInput.toLowerCase() === 'admin';
                 applyRoleVisibility();
-                document.getElementById('userBadge').textContent = isAdminLogin ? "Role: Admin" : ("CUST.CODE: " + currentUser);
+                document.getElementById('userBadge').textContent = 'CUST.CODE: ' + currentUser;
                 document.getElementById('userBadge').classList.remove('hidden');
                 const adminTools = document.getElementById('riwayatAdminTools');
-                if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
-
-                if (!isAdminLogin) loadCustomerContext(currentUser);
-                else loadPencapaianSalesFilter();
+                if (adminTools) adminTools.classList.add('hidden');
+                loadCustomerContext(currentUser);
                 loadRiwayat(true, true);
-                if (!isAdminLogin) loadInputMasterData();
-                if (isAdminLogin) switchTab('riwayat');
+                loadInputMasterData();
                 return true;
             } catch (e) {
-                console.warn("Sesi lokal tidak valid:", e);
-                clearAuthState();
+                console.warn('Gagal memulihkan sesi server:', e);
                 return false;
             }
         }
 
-        window.onload = function() {
+        window.onload = async function() {
             try {
                 if (window.jQuery && $.fn && $.fn.select2) {
                     $('.searchable-select').select2({ width: '100%' });
@@ -2088,7 +2209,7 @@ html, body {
 
             const tanggalInput = document.getElementById('inputTanggal');
             if (tanggalInput) tanggalInput.valueAsDate = new Date();
-            const restored = restoreAuthState();
+            const restored = await restoreAuthState();
             // Saat pertama membuka GitHub Pages, jangan tampilkan loading terus-menerus.
             // Loading hanya ditampilkan ketika benar-benar ada request API.
             showLoading(false);
@@ -2173,6 +2294,7 @@ html, body {
                 showLoading(false);
                 if (res.success) {
                     currentUser = res.custCode || currentUsernameInput;
+                    window.__serverSessionToken = String(res.token || '').trim();
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('registerPage').classList.add('hidden');
                     document.getElementById('mainPage').classList.remove('hidden');
@@ -4489,6 +4611,9 @@ html, body {
         function logout() {
             showModal("Konfirmasi", "Keluar aplikasi?", true, function(isOk) {
                 if (isOk) {
+                    const token = String(window.__serverSessionToken || '').trim();
+                    if (token) { try { google.script.run.destroyLoginSession(token); } catch (e) {} }
+                    window.__serverSessionToken = '';
                     clearAuthState();
                     currentUser = ""; currentUsernameInput = ""; shoppingCart = []; globalRiwayatData = []; rawMonitoringDataObject = {}; globalOutletKontrakData = []; pencapaianCache = {}; globalPricelistData = [];
                     document.getElementById('mainPage').classList.add('hidden');
