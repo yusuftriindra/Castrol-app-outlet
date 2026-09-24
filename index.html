@@ -1979,6 +1979,7 @@ html, body {
         let kontrakLoading = false;
         let pencapaianLoading = false;
         let pencapaianCache = {};
+        let orderAchievementData = null;
         let globalOutletBWSData = { headers: [], rows: [] };
         let outletBWSLoading = false;
         let outletBWSFormMaster = { sales: [], outletMap: {} };
@@ -2377,7 +2378,8 @@ html, body {
             return Number(value || 0).toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:1});
         }
 
-        function renderOrderAchievement(data) {
+        function renderOrderAchievement(data, preserveBase) {
+            if (!preserveBase) orderAchievementData = data || {};
             const quarterEl = document.getElementById('orderAchievementQuarter');
             const monthsEl = document.getElementById('orderAchievementMonths');
             const total = data && data.total ? data.total : {target:0,actual:0,gap:0,ach:0};
@@ -2412,6 +2414,40 @@ html, body {
             if(actualEl) actualEl.textContent=formatOrderAchievementNumber(total.actual)+' L';
             if(gapEl){gapEl.textContent=formatOrderAchievementNumber(total.gap)+' L';gapEl.className='text-xs font-extrabold '+(Number(total.gap||0)>=0?'text-emerald-700':'text-red-600');}
             if(achEl) achEl.textContent=Number(total.target||0)>0?Number(total.ach||0).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'-';
+        }
+
+        function getCurrentCartLiter() {
+            let total = 0;
+            (shoppingCart || []).forEach(function(item) {
+                const pack = Number(item.pack) || 1;
+                const qty = Number(item.qty) || 0;
+                const pcs = String(item.satuan || '').toUpperCase() === 'DUS' ? qty * pack : qty;
+                total += pcs * (Number(item.liter) || 0);
+            });
+            return Number(total.toFixed(2));
+        }
+
+        function renderOrderAchievementWithCart() {
+            if (!orderAchievementData) return;
+            const data = JSON.parse(JSON.stringify(orderAchievementData));
+            const months = Array.isArray(data.months) ? data.months : [];
+            const currentMonth = Number(data.currentMonth);
+            const cartLiter = getCurrentCartLiter();
+            const idx = months.findIndex(function(m){ return Number(m.month) === currentMonth; });
+            if (idx >= 0) {
+                const baseActual = Number(months[idx].actual || 0);
+                months[idx].actual = Number((baseActual + cartLiter).toFixed(2));
+                months[idx].gap = Number((months[idx].actual - Number(months[idx].target || 0)).toFixed(2));
+                months[idx].ach = Number(months[idx].target || 0) > 0 ? Number(((months[idx].actual / Number(months[idx].target)) * 100).toFixed(1)) : 0;
+            }
+            const total = data.total || {target:0,actual:0,gap:0,ach:0};
+            const baseTotalActual = Number(orderAchievementData.total && orderAchievementData.total.actual || 0);
+            total.actual = Number((baseTotalActual + cartLiter).toFixed(2));
+            total.gap = Number((total.actual - Number(total.target || 0)).toFixed(2));
+            total.ach = Number(total.target || 0) > 0 ? Number(((total.actual / Number(total.target)) * 100).toFixed(1)) : 0;
+            data.total = total;
+            data.months = months;
+            renderOrderAchievement(data, true);
         }
 
         function loadOrderAchievement(forceReload) {
@@ -2521,6 +2557,7 @@ html, body {
                 container.innerHTML = '<p class="text-xs text-slate-400 text-center py-3 border rounded bg-slate-50">Belum ada item.</p>';
                 document.getElementById('grandVol').textContent = "0";
                 document.getElementById('grandVal').textContent = "0";
+                renderOrderAchievementWithCart();
                 return;
             }
 
@@ -2556,6 +2593,7 @@ html, body {
             container.innerHTML = html;
             document.getElementById('grandVol').textContent = totalVol.toFixed(1);
             document.getElementById('grandVal').textContent = Math.round(totalVal).toLocaleString('id-ID');
+            renderOrderAchievementWithCart();
         }
 
         function setPayment(value) {
