@@ -2181,6 +2181,7 @@ html, body {
                         document.getElementById('userBadge').classList.remove('hidden');
                         const adminTools = document.getElementById('riwayatAdminTools');
                         if (adminTools) adminTools.classList.add('hidden');
+                        loadOrderAchievement(true);
                         loadCustomerContext(currentUser);
                         loadRiwayat(true, true);
                         loadInputMasterData();
@@ -2218,6 +2219,7 @@ html, body {
                 document.getElementById('userBadge').classList.remove('hidden');
                 const adminTools = document.getElementById('riwayatAdminTools');
                 if (adminTools) adminTools.classList.add('hidden');
+                loadOrderAchievement(true);
                 loadCustomerContext(currentUser);
                 loadRiwayat(true, true);
                 loadInputMasterData();
@@ -2338,8 +2340,16 @@ html, body {
                     const adminTools = document.getElementById('riwayatAdminTools');
                     if (adminTools) adminTools.classList.toggle('hidden', !isAdminLogin);
                     saveAuthState();
-                    if (!isAdminLogin) loadCustomerContext(currentUser);
-                    else loadPencapaianSalesFilter();
+                    if (!isAdminLogin) {
+                        // Target & Actual sudah dipersiapkan server saat proses login.
+                        // Render langsung agar tab Pesan Order tidak menunggu request kedua.
+                        if (res.orderAchievement && res.orderAchievement.success) {
+                            renderOrderAchievement(res.orderAchievement);
+                        } else {
+                            loadOrderAchievement(true);
+                        }
+                        loadCustomerContext(currentUser);
+                    } else loadPencapaianSalesFilter();
                     loadRiwayat(true, true);
                     if (!isAdminLogin) loadInputMasterData();
                     if (isAdminLogin) switchTab('riwayat');
@@ -2360,7 +2370,6 @@ html, body {
                 document.getElementById('inputTanggal').value = new Date().toISOString().slice(0,10);
                 const oo=document.getElementById('customerInputOutlet'); if(oo) oo.textContent=ctx.outlet || '-';
                 setPayment(document.getElementById('inputPayment').value || 'CASH');
-                loadOrderAchievement(true);
             }).withFailureHandler(function(err){ showModal('Gagal','Gagal memuat data CUST.CODE: '+(err&&err.message?err.message:'Terjadi kesalahan.')); }).getCustomerByCustCode(code);
         }
 
