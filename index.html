@@ -1562,7 +1562,7 @@ html, body {
                                         <div><div class="text-[8px] text-slate-400">Gap</div><div id="orderTotalGap" class="text-xs font-extrabold text-slate-700">-</div></div>
                                         <div><div class="text-[8px] text-slate-400">Ach %</div><div id="orderTotalAch" class="text-xs font-extrabold text-slate-700">-</div></div>
                                     </div>
-                                    <div class="text-[8px] text-slate-400 mt-2">Actual = APPROVE + order PENDING. Order DECLINE tidak dihitung.</div>
+                                    <div class="text-[8px] text-slate-400 mt-2">Target = TARGET QUARTER LITER / TARGET MONTHLY LITER. Actual = APPROVE + order PENDING dalam liter. Order DECLINE tidak dihitung.</div>
                                 </div>
                             </div>
 
@@ -2372,7 +2372,7 @@ html, body {
             const quarterEl = document.getElementById('orderAchievementQuarter');
             const monthsEl = document.getElementById('orderAchievementMonths');
             const total = data && data.total ? data.total : {target:0,actual:0,gap:0,ach:0};
-            if (quarterEl) quarterEl.textContent = data && data.quarter ? String(data.quarter) + ' • Target dari sheet TARGET OUTLET' : 'Quartal berjalan';
+            if (quarterEl) quarterEl.textContent = data && data.quarter ? String(data.quarter) + ' • Target LITER dari sheet TARGET OUTLET' : 'Quartal berjalan';
             if (!monthsEl) return;
             const months = Array.isArray(data && data.months) ? data.months : [];
             const currentMonth = Number(data && data.currentMonth);
@@ -2399,9 +2399,9 @@ html, body {
             const actualEl=document.getElementById('orderTotalActual');
             const gapEl=document.getElementById('orderTotalGap');
             const achEl=document.getElementById('orderTotalAch');
-            if(targetEl) targetEl.textContent=formatOrderAchievementNumber(total.target)+' dus';
-            if(actualEl) actualEl.textContent=formatOrderAchievementNumber(total.actual)+' dus';
-            if(gapEl){gapEl.textContent=formatOrderAchievementNumber(total.gap)+' dus';gapEl.className='text-xs font-extrabold '+(Number(total.gap||0)>=0?'text-emerald-700':'text-red-600');}
+            if(targetEl) targetEl.textContent=formatOrderAchievementNumber(total.target)+' L';
+            if(actualEl) actualEl.textContent=formatOrderAchievementNumber(total.actual)+' L';
+            if(gapEl){gapEl.textContent=formatOrderAchievementNumber(total.gap)+' L';gapEl.className='text-xs font-extrabold '+(Number(total.gap||0)>=0?'text-emerald-700':'text-red-600');}
             if(achEl) achEl.textContent=Number(total.target||0)>0?Number(total.ach||0).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'-';
         }
 
