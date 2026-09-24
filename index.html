@@ -3005,10 +3005,28 @@ html, body {
                                 </div>
                                 <div class="text-right shrink-0">
                                     <div class="text-base font-extrabold text-emerald-800">${formatNumberID(contractVolume,1)}</div>
-                                    <div class="text-[8px] font-bold text-emerald-600">Volume</div>
+                                    <div class="text-[8px] font-bold text-emerald-600">Actual Volume</div>
                                 </div>
                             </div>
-                            <div class="text-[8px] text-slate-500 mt-2">Periode: ${escapeHtml(contractPeriod)}</div>
+                            <div class="grid grid-cols-4 gap-2 mt-3">
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Target</div>
+                                    <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${formatNumberID(Number(item.targetQuarterLiter||0),1)}</div>
+                                </div>
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-emerald-600 uppercase">Actual</div>
+                                    <div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${formatNumberID(contractVolume,1)}</div>
+                                </div>
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Gap</div>
+                                    <div class="text-[11px] font-extrabold ${Number(contractVolume)-Number(item.targetQuarterLiter||0) >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5">${formatNumberID(Number(contractVolume)-Number(item.targetQuarterLiter||0),1)}</div>
+                                </div>
+                                <div class="rounded-lg bg-white/80 border border-emerald-100 p-2">
+                                    <div class="text-[8px] font-bold text-slate-400 uppercase">Ach %</div>
+                                    <div class="text-[11px] font-extrabold text-emerald-800 mt-0.5">${Number(item.targetQuarterLiter||0)>0 ? formatPercentID((Number(contractVolume)/Number(item.targetQuarterLiter||0))*100) : '-'}</div>
+                                </div>
+                            </div>
+                            <div class="text-[8px] text-slate-500 mt-2">Periode: ${escapeHtml(contractPeriod)} • Satuan target/actual: Volume DAMEN</div>
                         </div>
                         <div class="monitoring-point-box" style="${item.hasBwsContract ? '' : 'display:none'}">
   <div class="monitoring-point-head">
