@@ -621,6 +621,44 @@
     -webkit-overflow-scrolling: touch;
 }
 
+.riwayat-cards-wrap {
+    width: 100%;
+    max-height: var(--table-max-height);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.riwayat-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.riwayat-card {
+    transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.riwayat-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 20px rgba(15,23,42,.07);
+}
+
+.riwayat-cards-wrap::-webkit-scrollbar { width: 7px; }
+.riwayat-cards-wrap::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
+.riwayat-cards-wrap::-webkit-scrollbar-track { background:#f8fafc; }
+
+@media (max-width:1100px){
+    .riwayat-cards-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+@media (max-width:767px){
+    .riwayat-cards-grid{grid-template-columns:1fr;gap:10px;}
+    .riwayat-cards-wrap{max-height:var(--table-max-height);}
+}
+
 
         .riwayat-select-checkbox{vertical-align:middle;}
         #riwayatBulkDeleteTools{position:sticky;top:0;z-index:5;}
@@ -1268,7 +1306,8 @@ html,body{height:100%;}
   #tabOutletKontrak .bg-white.border.rounded-xl.shadow-sm>div,
   #tabOutletBWS .bg-white.border.rounded-xl.shadow-sm>div,
   #tabPricelist .bg-white.border.rounded-xl.shadow-sm>div,
-  .riwayat-table-wrap{
+  .riwayat-table-wrap,
+  .riwayat-cards-wrap{
     max-height:var(--table-max-height)!important;
   }
   #customerTable thead th,
@@ -2319,7 +2358,7 @@ html,body{height:100%;}
             const startIndex = isAdmin ? (riwayatPage - 1) * RIWAYAT_PAGE_SIZE : 0;
             const visibleData = isAdmin ? data.slice(startIndex, startIndex + RIWAYAT_PAGE_SIZE) : data;
 
-            let rows = "";
+            let cards = "";
 
             visibleData.forEach((item, index) => {
                 const status = String(item.status || 'PENDING').toUpperCase();
@@ -2340,7 +2379,7 @@ html,body{height:100%;}
 
                 const statusCell = isAdmin ? `
                     <select
-                        onclick="event.stopPropagation()" class="bulk-status-select w-full min-w-[120px] border border-slate-300 rounded-md px-2 py-1.5 text-[9px] font-bold bg-white"
+                        onclick="event.stopPropagation()" class="bulk-status-select w-full border border-slate-300 rounded-lg px-2.5 py-2 text-[9px] font-bold bg-white"
                         data-order-id="${escapeHtml(item.id)}"
                         data-current-status="${escapeHtml(status)}">
                         <option value="">${escapeHtml(status)} / TIDAK DIUBAH</option>
@@ -2348,52 +2387,79 @@ html,body{height:100%;}
                         <option value="DECLINE">DECLINE</option>
                     </select>
                 ` : `
-                    <span class="inline-flex justify-center items-center px-2 py-1 rounded-full border text-[9px] font-extrabold ${statusClass}">
+                    <span class="inline-flex justify-center items-center px-2.5 py-1 rounded-full border text-[9px] font-extrabold ${statusClass}">
                         ${escapeHtml(status)}
                     </span>`;
 
-                rows += `
-                    <tr class="riwayat-row hover:bg-emerald-50/40 transition align-top cursor-pointer" onclick="lihatDetail('${escapeHtml(item.id)}')">
-                        <td class="p-2.5 text-center">
-                            <input type="checkbox" class="riwayat-select-checkbox w-3.5 h-3.5 accent-emerald-600 cursor-pointer"
-                                data-order-id="${escapeHtml(item.id)}"
-                                ${selectedRiwayatIds[String(item.id)] ? 'checked' : ''}
-                                onclick="event.stopPropagation()" onchange="toggleRiwayatSelection(this)">
-                        </td>
-                        <td class="p-2.5 text-center text-slate-400 font-semibold">${startIndex + index + 1}</td>
-                        <td class="p-2.5 whitespace-nowrap text-slate-600">${escapeHtml(item.tanggal || '-')}</td>
-                        <td class="p-2.5">
-                            <div class="font-bold text-slate-800 min-w-[130px]">${escapeHtml(item.outlet || '-')}</div>
-                            ${isAdmin ? `<div class="text-[9px] text-slate-400 mt-1">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
-                        </td>
-                        <td class="p-2.5">
-                            <div class="text-[10px] leading-5 text-slate-600 min-w-[180px]">${productText}</div>
-                        </td>
-                        <td class="p-2.5 text-right whitespace-nowrap font-semibold text-slate-700">${escapeHtml(item.volume || '0')} L</td>
-                        <td class="p-2.5 text-right whitespace-nowrap font-semibold text-slate-700">Rp ${Number(item.value || 0).toLocaleString('id-ID')}</td>
-                        <td class="p-2.5">${statusCell}</td>
-                        <td class="p-2.5">
-                            <div class="flex items-center gap-1.5 min-w-[100px]">
-                                <button type="button"
-                                    onclick="event.stopPropagation(); editRiwayat('${escapeHtml(item.id)}'); return false;"
-                                    style="display:inline-flex !important;align-items:center;justify-content:center;min-width:48px !important;visibility:visible !important;opacity:1 !important;"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2.5 rounded-md font-bold text-[9px] border border-blue-700 transition"
-                                    title="Edit order">✏️ EDIT</button>
-                                <button type="button"
-                                    onclick="event.stopPropagation(); kirimUlangWA('${escapeHtml(item.id)}')"
-                                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2.5 rounded-md font-semibold text-[9px] transition"
-                                    title="Kirim ulang WhatsApp">💬 WA</button>
-                                <button type="button"
-                                    onclick="event.stopPropagation(); hapusRiwayat('${escapeHtml(item.id)}')"
-                                    class="bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-2.5 rounded-md font-medium border border-red-200/60 transition"
-                                    title="Hapus">🗑️</button>
+                cards += `
+                    <div class="riwayat-card bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div class="p-4">
+                            <div class="flex items-start justify-between gap-3 mb-3">
+                                <div class="min-w-0">
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tanggal</div>
+                                    <div class="text-sm font-extrabold text-slate-800 mt-0.5">${escapeHtml(item.tanggal || '-')}</div>
+                                </div>
+                                <div class="text-right flex-shrink-0">${statusCell}</div>
                             </div>
-                        </td>
-                    </tr>`;
+
+                            <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 mb-3">
+                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outlet</div>
+                                <div class="text-sm font-extrabold text-slate-800 break-words">${escapeHtml(item.outlet || '-')}</div>
+                                ${isAdmin ? `<div class="text-[9px] text-slate-400 mt-1">CUST.CODE: ${escapeHtml(item.custCode || item.dsr || '-')}</div>` : ''}
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Produk</div>
+                                <div class="text-[10px] leading-5 text-slate-600 break-words">${productText}</div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <div class="rounded-xl border border-slate-100 bg-white p-2.5">
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase">Volume</div>
+                                    <div class="text-xs font-extrabold text-slate-700 mt-0.5">${escapeHtml(item.volume || '0')} L</div>
+                                </div>
+                                <div class="rounded-xl border border-slate-100 bg-white p-2.5">
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase">Nilai</div>
+                                    <div class="text-xs font-extrabold text-slate-700 mt-0.5">Rp ${Number(item.value || 0).toLocaleString('id-ID')}</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" class="riwayat-select-checkbox w-3.5 h-3.5 accent-emerald-600 cursor-pointer flex-shrink-0"
+                                        data-order-id="${escapeHtml(item.id)}"
+                                        ${selectedRiwayatIds[String(item.id)] ? 'checked' : ''}
+                                        onclick="event.stopPropagation()" onchange="toggleRiwayatSelection(this)"
+                                        title="Pilih transaksi">
+                                    <span class="text-[9px] text-slate-400 font-semibold">No. ${startIndex + index + 1}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                    <button type="button"
+                                        onclick="event.stopPropagation(); editRiwayat('${escapeHtml(item.id)}'); return false;"
+                                        style="display:inline-flex !important;align-items:center;justify-content:center;min-width:48px !important;visibility:visible !important;opacity:1 !important;"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2.5 rounded-lg font-bold text-[9px] border border-blue-700 transition"
+                                        title="Edit order">✏️ EDIT</button>
+                                    <button type="button"
+                                        onclick="event.stopPropagation(); kirimUlangWA('${escapeHtml(item.id)}')"
+                                        class="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2.5 rounded-lg font-semibold text-[9px] transition"
+                                        title="Kirim ulang WhatsApp">💬 WA</button>
+                                    <button type="button"
+                                        onclick="event.stopPropagation(); hapusRiwayat('${escapeHtml(item.id)}')"
+                                        class="bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-2.5 rounded-lg font-medium border border-red-200/60 transition"
+                                        title="Hapus">🗑️</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
             });
 
             const bulkControls = isAdmin ? `
                 <div class="flex flex-wrap items-center gap-2 p-3 bg-slate-50 border-b border-slate-200">
+                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white border border-slate-200 cursor-pointer">
+                        <input type="checkbox" id="selectAllRiwayatVisible" onclick="toggleSelectAllRiwayatVisible(true)"
+                            class="w-3.5 h-3.5 accent-emerald-600 cursor-pointer" title="Pilih semua yang tampil">
+                        <span class="text-[10px] font-bold text-slate-600">PILIH SEMUA</span>
+                    </label>
                     <button type="button" onclick="resetPilihanStatusRiwayat()"
                         class="px-3 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
                         RESET
@@ -2403,34 +2469,17 @@ html,body{height:100%;}
                         DONE
                     </button>
                     <span id="bulkStatusInfo" class="text-[10px] text-slate-500 font-semibold ml-auto">
-                        Pilih status pada masing-masing baris lalu klik DONE.
+                        Pilih status pada masing-masing transaksi lalu klik DONE.
                     </span>
                 </div>` : '';
 
             container.innerHTML = `
                 <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     ${bulkControls}
-                    <div class="riwayat-table-wrap">
-                        <table class="riwayat-table w-full text-left border-collapse text-[10px] ${!isAdmin ? 'riwayat-sales-table' : ''}" style="min-width: 1090px;">
-                            <thead>
-                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap w-10">
-                                        <input type="checkbox" id="selectAllRiwayatVisible" onclick="toggleSelectAllRiwayatVisible(true)"
-                                            class="w-3.5 h-3.5 accent-emerald-600 cursor-pointer" title="Pilih semua yang tampil">
-                                    </th>
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">No</th>
-                                    
-                                    <th class="p-2.5 font-bold whitespace-nowrap">Tanggal</th>
-                                    <th class="p-2.5 font-bold whitespace-nowrap">Outlet</th>
-                                    <th class="p-2.5 font-bold whitespace-nowrap">Produk</th>
-                                    <th class="p-2.5 font-bold text-right whitespace-nowrap">Volume</th>
-                                    <th class="p-2.5 font-bold text-right whitespace-nowrap">Nilai</th>
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">Status</th>
-                                    <th class="p-2.5 font-bold text-center whitespace-nowrap">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>
+                    <div class="riwayat-cards-wrap p-3 sm:p-4">
+                        <div class="riwayat-cards-grid">
+                            ${cards}
+                        </div>
                     </div>
                     ${isAdmin && totalPages > 1 ? `<div class="flex items-center justify-between gap-2 px-3 py-2 border-t border-slate-200 bg-slate-50 text-[10px]"><span class="text-slate-500">Menampilkan ${startIndex + 1}-${Math.min(startIndex + RIWAYAT_PAGE_SIZE, data.length)} dari ${data.length} transaksi</span><div class="flex items-center gap-1"><button type="button" onclick="changeRiwayatPage(-1)" class="px-2 py-1 rounded border bg-white ${riwayatPage <= 1 ? 'opacity-40 cursor-not-allowed' : ''}" ${riwayatPage <= 1 ? 'disabled' : ''}>‹</button><span class="px-2 font-bold">Halaman ${riwayatPage}/${totalPages}</span><button type="button" onclick="changeRiwayatPage(1)" class="px-2 py-1 rounded border bg-white ${riwayatPage >= totalPages ? 'opacity-40 cursor-not-allowed' : ''}" ${riwayatPage >= totalPages ? 'disabled' : ''}>›</button></div></div>` : ''}
                 </div>`;
@@ -2441,7 +2490,7 @@ html,body{height:100%;}
             const total = Math.max(1, Math.ceil((globalRiwayatData || []).length / RIWAYAT_PAGE_SIZE));
             riwayatPage = Math.max(1, Math.min(total, riwayatPage + Number(delta || 0)));
             renderRiwayatList(globalRiwayatData);
-            const wrap = document.querySelector('.riwayat-table-wrap');
+            const wrap = document.querySelector('.riwayat-cards-wrap');
             if (wrap) wrap.scrollTop = 0;
         }
 
