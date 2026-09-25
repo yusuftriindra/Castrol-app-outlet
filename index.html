@@ -2040,7 +2040,10 @@ body {
 
         function showLoading(show) {
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-        }\1            // Timeout Apps Script tidak ditampilkan sebagai peringatan kepada user.
+        }
+
+        function showModal(title, message, isConfirm = false, callback = null) {
+            // Jangan tampilkan peringatan timeout Apps Script kepada pengguna.
             const modalMessage = String(message || '');
             if (modalMessage.indexOf('Request ke Apps Script timeout') !== -1) {
                 return;
@@ -2053,13 +2056,19 @@ body {
 
             let cancelBtn = document.getElementById('modalCancelBtn');
             cancelBtn.style.display = isConfirm ? 'inline-block' : 'none';
-            modalCallback = callback;\3
+            modalCallback = callback;
+        }
+
+        function closeModal(isOk) {
             document.getElementById('customModal').style.display = 'none';
             const modalCard = document.getElementById('customModal').querySelector('.modern-modal-card');
             if (modalCard) modalCard.classList.remove('bws-detail-modal-card');
             document.getElementById('modalOkBtn').textContent = 'OK';
             if (modalCallback && typeof modalCallback === 'function') {
-                modalCallback(isOk);
+                const callback = modalCallback;
+                modalCallback = null;
+                callback(isOk);
+            } else {
                 modalCallback = null;
             }
         }
