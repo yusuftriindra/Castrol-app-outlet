@@ -70,7 +70,7 @@
                         window[callbackName] = succeed;
                         script.async = true;
                         script.onerror = function () {
-                            fail(new Error('Klik saja OK'));
+                            fail(new Error('Klik saja OK, atau pindah tab menu.'));
                         };
 
                         let encodedArgs = '';
