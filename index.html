@@ -1472,6 +1472,43 @@ body {
 }
 </style>
 
+
+<style id="riwayat-mobile-page-scroll-fix">
+/* RIWAYAT HP: jangan gunakan scroll di dalam box.
+   Biarkan seluruh halaman/tab yang melakukan scroll sampai paling bawah. */
+@media (max-width: 767px) {
+    #tabRiwayat .riwayat-table-wrap,
+    #listRiwayat .riwayat-table-wrap,
+    .riwayat-table-wrap {
+        max-height: none !important;
+        height: auto !important;
+        overflow-y: visible !important;
+        overflow-x: auto !important;
+        overscroll-behavior: auto !important;
+        scrollbar-gutter: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #tabRiwayat .riwayat-cards-wrap,
+    #listRiwayat .riwayat-cards-wrap,
+    .riwayat-cards-wrap {
+        max-height: none !important;
+        height: auto !important;
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: auto !important;
+        scrollbar-gutter: auto !important;
+        -webkit-overflow-scrolling: auto;
+    }
+
+    #tabRiwayat .riwayat-cards-grid,
+    #listRiwayat .riwayat-cards-grid {
+        height: auto !important;
+        max-height: none !important;
+    }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 font-sans">
 
