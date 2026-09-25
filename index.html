@@ -1369,6 +1369,109 @@ html, body {
 }
 </style>
 
+
+<style id="mobile-all-tabs-scroll-fix-v2">
+/* =========================================================
+   FIX SCROLL HP - SEMUA TAB
+   Konten utama menjadi satu area scroll penuh sampai bagian
+   paling bawah. Tidak mengubah isi/fungsi masing-masing tab.
+   ========================================================= */
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden !important;
+}
+
+#app.app-shell {
+    width: 100%;
+    min-height: 100vh;
+    overflow: hidden !important;
+}
+
+/* Container utama harus menjadi satu-satunya scroll vertical */
+#app > .p-4.flex-1.overflow-y-auto {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex: 1 1 0% !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-y !important;
+    box-sizing: border-box !important;
+}
+
+/* Pastikan isi setiap tab boleh tumbuh sesuai isi sebenarnya */
+#mainPage,
+#mainPage > .tab-content,
+.tab-content {
+    min-height: max-content !important;
+}
+
+/* Beri ruang aman di bagian paling bawah layar HP */
+@media (max-width: 767px) {
+    #app.app-shell {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        max-height: none !important;
+    }
+
+    #app > .p-4.flex-1.overflow-y-auto {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        flex: 1 1 0% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
+        scroll-padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    #mainPage {
+        min-height: max-content !important;
+        height: auto !important;
+        padding-bottom: 24px !important;
+    }
+
+    #mainPage > .tab-content {
+        min-height: max-content !important;
+        height: auto !important;
+        overflow: visible !important;
+        padding-bottom: 24px !important;
+    }
+
+    /* Input, Riwayat, Monitoring dan tab lain tetap mengikuti
+       tinggi konten masing-masing dan tidak dipotong viewport. */
+    #tabInput,
+    #tabRiwayat,
+    #tabMonitoring,
+    #tabPencapaian,
+    #tabOutletKontrak,
+    #tabOutletBWS,
+    #tabPricelist,
+    #tabTambahCustomer {
+        min-height: max-content !important;
+        height: auto !important;
+    }
+
+    /* Tabel tetap memiliki scroll horizontal/vertical internal
+       bila memang diperlukan, tanpa memotong halaman utama. */
+    #customerTableWrap,
+    .riwayat-table-wrap,
+    .riwayat-cards-wrap,
+    #tabMonitoring .overflow-x-auto,
+    #tabOutletKontrak .overflow-x-auto,
+    #tabOutletBWS .overflow-x-auto,
+    #tabPricelist .overflow-x-auto {
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -3144,7 +3247,7 @@ html, body {
                         <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3" style="${item.hasBwsContract ? '' : 'display:none'}">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <div class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Pencapaian Volume Kontrak</div>
+                                    <div class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Pencapaian Volume Kontrak.</div>
                                     <div class="text-[8px] text-slate-500 mt-0.5"></div>
                                 </div>
                                 <div class="text-right shrink-0">
@@ -5103,4 +5206,3 @@ html, body {
 </script>
 </body>
 </html>
-
