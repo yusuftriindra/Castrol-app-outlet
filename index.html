@@ -1619,12 +1619,14 @@ body {
                 <!-- TAB INPUT : CUSTOMER / CUST.CODE -->
                 <div id="tabInput" class="tab-content space-y-4">
                     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div class="px-4 pt-4 pb-3 border-b border-slate-100">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-600">INPUT ORDER</div>
-                                    <h2 class="text-lg font-extrabold text-slate-800 mt-0.5">Buat Order</h2>
-                                    <p class="text-[10px] text-slate-400 mt-1"></p>
+                        <div class="px-4 py-3 border-b border-slate-100">
+                            <div class="flex items-center justify-between gap-3 min-w-0">
+                                <div class="min-w-0 flex items-center gap-3">
+                                    <div class="w-11 h-11 shrink-0 rounded-2xl bg-emerald-700 text-white flex items-center justify-center text-lg shadow-sm">🏪</div>
+                                    <div class="min-w-0">
+                                        <div class="text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">OUTLET ORDER</div>
+                                        <div id="customerInputOutlet" class="mt-0.5 text-base sm:text-lg font-extrabold text-slate-800 truncate">-</div>
+                                    </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
                                     <button type="button" id="btnKirimOrder" onclick="kirimSemuaOrder()" class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white py-2.5 px-4 font-extrabold text-xs shadow-sm transition whitespace-nowrap">Kirim Order</button>
@@ -1634,17 +1636,6 @@ body {
                         </div>
 
                         <div class="p-4 space-y-3">
-                            <div class="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-4 shadow-sm">
-                                <div class="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-emerald-100/60"></div>
-                                <div class="relative flex items-center gap-3">
-                                    <div class="w-11 h-11 rounded-2xl bg-emerald-700 text-white flex items-center justify-center text-lg shadow-sm">🏪</div>
-                                    <div class="min-w-0">
-                                        <div class="text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">OUTLET ORDER</div>
-                                        <div id="customerInputOutlet" class="mt-0.5 text-base sm:text-lg font-extrabold text-slate-800 truncate">-</div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- TARGET & PENCAPAIAN ORDER QUARTAL BERJALAN -->
                             <div id="orderAchievementCard" class="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-3 shadow-sm">
                                 <div class="flex items-center justify-between gap-2 mb-2.5">
@@ -3247,7 +3238,7 @@ body {
                         <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3" style="${item.hasBwsContract ? '' : 'display:none'}">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <div class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Pencapaian Volume Kontrak.</div>
+                                    <div class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Pencapaian Volume Kontrak</div>
                                     <div class="text-[8px] text-slate-500 mt-0.5"></div>
                                 </div>
                                 <div class="text-right shrink-0">
