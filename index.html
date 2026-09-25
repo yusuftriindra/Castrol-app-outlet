@@ -70,7 +70,7 @@
                         window[callbackName] = succeed;
                         script.async = true;
                         script.onerror = function () {
-                            fail(new Error('Klik saja OK, atau pindah tab menu.'));
+                            fail(new Error('Klik saja OK'));
                         };
 
                         let encodedArgs = '';
@@ -2040,20 +2040,20 @@ body {
 
         function showLoading(show) {
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-        }
+        }\1            // Timeout Apps Script tidak ditampilkan sebagai peringatan kepada user.
+            const modalMessage = String(message || '');
+            if (modalMessage.indexOf('Request ke Apps Script timeout') !== -1) {
+                return;
+            }
 
-        function showModal(title, message, isConfirm = false, callback = null) {
             document.getElementById('modalTitle').textContent = title;
             document.getElementById('modalSubtitle').textContent = '';
             document.getElementById('modalBody').textContent = message;
             document.getElementById('customModal').style.display = 'flex';
-            
+
             let cancelBtn = document.getElementById('modalCancelBtn');
             cancelBtn.style.display = isConfirm ? 'inline-block' : 'none';
-            modalCallback = callback;
-        }
-
-        function closeModal(isOk) {
+            modalCallback = callback;\3
             document.getElementById('customModal').style.display = 'none';
             const modalCard = document.getElementById('customModal').querySelector('.modern-modal-card');
             if (modalCard) modalCard.classList.remove('bws-detail-modal-card');
