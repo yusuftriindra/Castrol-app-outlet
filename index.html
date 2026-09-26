@@ -1472,131 +1472,6 @@ body {
 }
 </style>
 
-
-<style id="riwayat-scroll-fix-v3">
-/* RIWAYAT: halaman mengikuti seluruh tinggi konten dan scrollbar berada di halaman. */
-html:has(body.riwayat-page-active),
-body.riwayat-page-active {
-    height: auto !important;
-    min-height: 100% !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
-
-body.riwayat-page-active #app.app-shell {
-    height: auto !important;
-    min-height: 100vh !important;
-    max-height: none !important;
-    overflow: visible !important;
-}
-
-body.riwayat-page-active #app > .p-4.flex-1.overflow-y-auto {
-    height: auto !important;
-    min-height: max-content !important;
-    max-height: none !important;
-    flex: 0 0 auto !important;
-    overflow-y: visible !important;
-    overflow-x: hidden !important;
-}
-
-/* RIWAYAT: tidak ada batas tinggi internal; halaman utama yang melakukan scroll. */
-#tabRiwayat .riwayat-cards-wrap,
-#tabRiwayat .riwayat-table-wrap,
-#tabRiwayat #listRiwayat {
-    max-height: none !important;
-    height: auto !important;
-    overflow-y: visible !important;
-}
-
-#tabRiwayat .riwayat-cards-grid {
-    height: auto !important;
-    max-height: none !important;
-}
-
-/* Pastikan container utama tetap menjadi area scroll saat isi Riwayat panjang. */
-#app > .p-4.flex-1.overflow-y-auto {
-    overflow-y: auto !important;
-    min-height: 0 !important;
-}
-</style>
-
-
-<style id="riwayat-scroll-root-fix-v4">
-/* =========================================================
-   RIWAYAT - FULL PAGE SCROLL FIX
-   Saat Riwayat aktif, lepaskan seluruh penguncian viewport/flex
-   dari sistem scroll tabel agar halaman dapat memanjang mengikuti
-   seluruh isi Riwayat.
-   ========================================================= */
-html.riwayat-scroll-root,
-body.riwayat-scroll-root {
-    height: auto !important;
-    min-height: 100% !important;
-    max-height: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
-
-body.riwayat-page-active {
-    height: auto !important;
-    min-height: 100vh !important;
-    max-height: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
-
-body.riwayat-page-active #app.app-shell {
-    display: flex !important;
-    flex-direction: column !important;
-    height: auto !important;
-    min-height: 100vh !important;
-    max-height: none !important;
-    overflow: visible !important;
-}
-
-body.riwayat-page-active #app > .p-4.flex-1.overflow-y-auto {
-    flex: 0 0 auto !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-    overflow-x: visible !important;
-    overflow-y: visible !important;
-    overscroll-behavior: auto !important;
-    scrollbar-gutter: auto !important;
-}
-
-body.riwayat-page-active #mainPage,
-body.riwayat-page-active #mainPage > .tab-content,
-body.riwayat-page-active #tabRiwayat,
-body.riwayat-page-active #listRiwayat,
-body.riwayat-page-active #tabRiwayat .riwayat-cards-wrap,
-body.riwayat-page-active #tabRiwayat .riwayat-cards-grid {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-}
-
-body.riwayat-page-active #tabRiwayat .riwayat-cards-wrap {
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
-    -webkit-overflow-scrolling: auto !important;
-    overscroll-behavior: auto !important;
-    scrollbar-gutter: auto !important;
-}
-
-/* Jangan biarkan rule tabel umum mengunci wrapper Riwayat. */
-body.riwayat-page-active #listRiwayat .riwayat-table-wrap,
-body.riwayat-page-active #listRiwayat .riwayat-cards-wrap,
-body.riwayat-page-active .riwayat-table-wrap,
-body.riwayat-page-active .riwayat-cards-wrap {
-    max-height: none !important;
-    height: auto !important;
-    overflow-y: visible !important;
-}
-</style>
-
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -2649,8 +2524,11 @@ body.riwayat-page-active .riwayat-cards-wrap {
                 const pcs = String(item.satuan || '').toUpperCase() === 'DUS' ? qty * pack : qty;
                 totalLiter += pcs * (Number(item.liter) || 0);
             });
-            const channel = String(document.getElementById('inputChannel')?.value || orderAchievementData?.channel || '').trim().toUpperCase();
-            const divisor = channel === 'PCO' ? 12 : channel === 'MCO-4T' ? 9.6 : 1;
+            const channel = String(document.getElementById('inputChannel')?.value || orderAchievementData?.channel || '').trim().toUpperCase().replace(/\s+/g,' ');
+            const compactChannel = channel.replace(/[\s_]+/g, '');
+            let divisor = 1;
+            if (channel === 'BP' || channel === 'MCO-4T' || compactChannel === 'MCO4T') divisor = 9.6;
+            else if (channel === 'CAS' || channel === 'PCO') divisor = 12;
             return Number((totalLiter / divisor).toFixed(2));
         }
 
@@ -3343,23 +3221,7 @@ body.riwayat-page-active .riwayat-cards-wrap {
                 const contractTarget=Number(item.contractTarget||0);
                 const contractGap=contractVolume-contractTarget;
                 const contractAch=contractTarget>0?(contractVolume/contractTarget)*100:0;
-                function formatBwsContractDate(value){
-                    if(!value) return '';
-                    const raw=String(value).trim();
-                    let d=null;
-                    const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                    if(m){
-                        d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
-                    }else{
-                        d=new Date(raw);
-                    }
-                    if(!d || isNaN(d.getTime())) return raw;
-                    const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-                    return String(d.getDate()).padStart(2,'0')+' '+months[d.getMonth()]+' '+d.getFullYear();
-                }
-                const contractStartFormatted=formatBwsContractDate(item.contractStart);
-                const contractEndFormatted=formatBwsContractDate(item.contractEnd);
-                const contractPeriod=(contractStartFormatted&&contractEndFormatted) ? (contractStartFormatted+' s/d '+contractEndFormatted) : 'Periode kontrak belum tersedia';
+                const contractPeriod=(item.contractStart&&item.contractEnd) ? (item.contractStart+' s/d '+item.contractEnd) : 'Periode kontrak belum tersedia';
                 const categoryRows=allCats.slice(0,6).map(function(r){return `<div class="monitoring-category-row"><span class="cat-name">${escapeHtml(r.kategori||'Lainnya')}</span><span class="cat-number">${formatNumberID(r.volume,1)}</span><span class="cat-number">${formatNumberID(r.karton,1)}</span><span class="cat-rate">${formatNumberID(r.pointRate,1)}</span><strong>${formatNumberID(r.point,1)} pt</strong></div>`;}).join('');
                 html+=`<div class="monitoring-outlet-card">
                     <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)} • Actual DAMEN</div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
@@ -3405,10 +3267,7 @@ body.riwayat-page-active .riwayat-cards-wrap {
                                     <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div>
                                 </div>
                             </div>
-                            <div class="mt-3 rounded-lg border border-emerald-100 bg-white/80 px-3 py-2">
-                                <div class="text-[8px] font-bold text-slate-400 uppercase">Periode Kontrak</div>
-                                <div class="text-[10px] font-extrabold text-slate-700 mt-0.5">${escapeHtml(contractPeriod)}</div>
-                            </div>
+                            <div class="text-[8px] text-slate-500 mt-2"></div>
                         </div>
                         <div class="monitoring-point-box" style="${item.hasBwsContract ? '' : 'display:none'}">
   <div class="monitoring-point-head">
@@ -4909,8 +4768,6 @@ body.riwayat-page-active .riwayat-cards-wrap {
 
         function switchTab(tab) {
             // Hanya tiga tab yang tersedia di sistem: Input, Riwayat, Monitoring.
-            document.body.classList.toggle('riwayat-page-active', tab === 'riwayat');
-            document.documentElement.classList.toggle('riwayat-scroll-root', tab === 'riwayat');
             if (!['input','riwayat','monitoring'].includes(tab)) tab = 'input';
 
             const tabMap = {
