@@ -1519,6 +1519,84 @@ body.riwayat-page-active #app > .p-4.flex-1.overflow-y-auto {
     min-height: 0 !important;
 }
 </style>
+
+
+<style id="riwayat-scroll-root-fix-v4">
+/* =========================================================
+   RIWAYAT - FULL PAGE SCROLL FIX
+   Saat Riwayat aktif, lepaskan seluruh penguncian viewport/flex
+   dari sistem scroll tabel agar halaman dapat memanjang mengikuti
+   seluruh isi Riwayat.
+   ========================================================= */
+html.riwayat-scroll-root,
+body.riwayat-scroll-root {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+body.riwayat-page-active {
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+body.riwayat-page-active #app.app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+body.riwayat-page-active #app > .p-4.flex-1.overflow-y-auto {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto !important;
+    scrollbar-gutter: auto !important;
+}
+
+body.riwayat-page-active #mainPage,
+body.riwayat-page-active #mainPage > .tab-content,
+body.riwayat-page-active #tabRiwayat,
+body.riwayat-page-active #listRiwayat,
+body.riwayat-page-active #tabRiwayat .riwayat-cards-wrap,
+body.riwayat-page-active #tabRiwayat .riwayat-cards-grid {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+body.riwayat-page-active #tabRiwayat .riwayat-cards-wrap {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: auto !important;
+    overscroll-behavior: auto !important;
+    scrollbar-gutter: auto !important;
+}
+
+/* Jangan biarkan rule tabel umum mengunci wrapper Riwayat. */
+body.riwayat-page-active #listRiwayat .riwayat-table-wrap,
+body.riwayat-page-active #listRiwayat .riwayat-cards-wrap,
+body.riwayat-page-active .riwayat-table-wrap,
+body.riwayat-page-active .riwayat-cards-wrap {
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+}
+</style>
+
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -4813,6 +4891,7 @@ body.riwayat-page-active #app > .p-4.flex-1.overflow-y-auto {
         function switchTab(tab) {
             // Hanya tiga tab yang tersedia di sistem: Input, Riwayat, Monitoring.
             document.body.classList.toggle('riwayat-page-active', tab === 'riwayat');
+            document.documentElement.classList.toggle('riwayat-scroll-root', tab === 'riwayat');
             if (!['input','riwayat','monitoring'].includes(tab)) tab = 'input';
 
             const tabMap = {
