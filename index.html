@@ -2527,8 +2527,10 @@ body {
             const channel = String(document.getElementById('inputChannel')?.value || orderAchievementData?.channel || '').trim().toUpperCase().replace(/\s+/g,' ');
             const compactChannel = channel.replace(/[\s_]+/g, '');
             let divisor = 1;
-            if (channel === 'BP' || channel === 'MCO-4T' || compactChannel === 'MCO4T') divisor = 9.6;
-            else if (channel === 'CAS' || channel === 'PCO') divisor = 12;
+            if (channel === 'BP' || channel.indexOf('BP ') === 0 || channel.indexOf(' BP') >= 0 ||
+                channel === 'MCO-4T' || compactChannel === 'MCO4T' || compactChannel.indexOf('MCO4T') === 0) divisor = 9.6;
+            else if (channel === 'CAS' || channel.indexOf('CAS ') === 0 || channel.indexOf(' CAS') >= 0 ||
+                     channel === 'PCO' || channel.indexOf('PCO ') === 0 || channel.indexOf(' PCO') >= 0) divisor = 12;
             return Number((totalLiter / divisor).toFixed(2));
         }
 
