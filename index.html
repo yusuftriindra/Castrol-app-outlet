@@ -3343,7 +3343,23 @@ body.riwayat-page-active .riwayat-cards-wrap {
                 const contractTarget=Number(item.contractTarget||0);
                 const contractGap=contractVolume-contractTarget;
                 const contractAch=contractTarget>0?(contractVolume/contractTarget)*100:0;
-                const contractPeriod=(item.contractStart&&item.contractEnd) ? (item.contractStart+' s/d '+item.contractEnd) : 'Periode kontrak belum tersedia';
+                function formatBwsContractDate(value){
+                    if(!value) return '';
+                    const raw=String(value).trim();
+                    let d=null;
+                    const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                    if(m){
+                        d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+                    }else{
+                        d=new Date(raw);
+                    }
+                    if(!d || isNaN(d.getTime())) return raw;
+                    const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+                    return String(d.getDate()).padStart(2,'0')+' '+months[d.getMonth()]+' '+d.getFullYear();
+                }
+                const contractStartFormatted=formatBwsContractDate(item.contractStart);
+                const contractEndFormatted=formatBwsContractDate(item.contractEnd);
+                const contractPeriod=(contractStartFormatted&&contractEndFormatted) ? (contractStartFormatted+' s/d '+contractEndFormatted) : 'Periode kontrak belum tersedia';
                 const categoryRows=allCats.slice(0,6).map(function(r){return `<div class="monitoring-category-row"><span class="cat-name">${escapeHtml(r.kategori||'Lainnya')}</span><span class="cat-number">${formatNumberID(r.volume,1)}</span><span class="cat-number">${formatNumberID(r.karton,1)}</span><span class="cat-rate">${formatNumberID(r.pointRate,1)}</span><strong>${formatNumberID(r.point,1)} pt</strong></div>`;}).join('');
                 html+=`<div class="monitoring-outlet-card">
                     <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)} • Actual DAMEN</div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
@@ -3389,7 +3405,10 @@ body.riwayat-page-active .riwayat-cards-wrap {
                                     <div class="text-[11px] font-extrabold text-slate-800 mt-0.5">${contractTarget>0?formatPercentID(contractAch):'-'}</div>
                                 </div>
                             </div>
-                            <div class="text-[8px] text-slate-500 mt-2"></div>
+                            <div class="mt-3 rounded-lg border border-emerald-100 bg-white/80 px-3 py-2">
+                                <div class="text-[8px] font-bold text-slate-400 uppercase">Periode Kontrak</div>
+                                <div class="text-[10px] font-extrabold text-slate-700 mt-0.5">${escapeHtml(contractPeriod)}</div>
+                            </div>
                         </div>
                         <div class="monitoring-point-box" style="${item.hasBwsContract ? '' : 'display:none'}">
   <div class="monitoring-point-head">
