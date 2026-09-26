@@ -1472,6 +1472,28 @@ body {
 }
 </style>
 
+
+<style id="riwayat-scroll-fix-v2">
+/* RIWAYAT: tidak ada batas tinggi internal; halaman utama yang melakukan scroll. */
+#tabRiwayat .riwayat-cards-wrap,
+#tabRiwayat .riwayat-table-wrap,
+#tabRiwayat #listRiwayat {
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+}
+
+#tabRiwayat .riwayat-cards-grid {
+    height: auto !important;
+    max-height: none !important;
+}
+
+/* Pastikan container utama tetap menjadi area scroll saat isi Riwayat panjang. */
+#app > .p-4.flex-1.overflow-y-auto {
+    overflow-y: auto !important;
+    min-height: 0 !important;
+}
+</style>
 </head>
 <body class="bg-slate-50 font-sans">
 
@@ -5197,16 +5219,3 @@ body {
 </script>
 </body>
 </html>
-<style id="riwayat-no-height-limit-v1">
-/* RIWAYAT: box mengikuti seluruh tinggi konten, tanpa batas tinggi internal. */
-#tabRiwayat .riwayat-cards-wrap {
-    max-height: none !important;
-    height: auto !important;
-    overflow-y: visible !important;
-    overflow-x: hidden !important;
-}
-
-#tabRiwayat .riwayat-cards-grid {
-    height: auto !important;
-}
-</style>
