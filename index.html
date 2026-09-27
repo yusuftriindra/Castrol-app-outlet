@@ -2286,96 +2286,126 @@ body {
 
         async function restoreAuthState() {
             try {
+                // CUST.CODE adalah identitas utama sesi login.
+                // Token server hanya digunakan bila masih tersedia dan valid.
                 let state = _readSavedAuthState_();
                 if (!state) state = await _readAuthFromIndexedDB_();
-                if (!state || !state.username || !(state.custCode || state.sales)) return false;
 
-                if (String(state.username || '').trim().toLowerCase() === 'admin' ||
-                    String(state.custCode || '').trim().toLowerCase() === 'admin') {
-                    clearAuthState();
+                const savedCustCode = String(
+                    state && (state.custCode || state.sales) || ''
+                ).trim();
+
+                if (!savedCustCode || savedCustCode.toLowerCase() === 'admin') {
                     return false;
                 }
 
-                const token = String(state.sessionToken || '').trim();
+                // 1. Coba pulihkan token server yang tersimpan.
+                const token = String(state && state.sessionToken || '').trim();
+
                 if (token) {
-                    await new Promise(function(resolve) {
-                        google.script.run.withSuccessHandler(function(res) {
-                            if (res && res.success && res.session) {
-                                window.__serverSessionToken = res.token || token;
-                                currentUsernameInput = String(res.session.username || state.username).trim();
-                                currentUser = String(res.session.custCode || state.custCode || state.sales).trim();
+                    const restoredByToken = await new Promise(function(resolve) {
+                        google.script.run
+                            .withSuccessHandler(function(res) {
+                                if (res && res.success && res.session) {
+                                    window.__serverSessionToken = String(res.token || token).trim();
+                                    currentUsernameInput = String(
+                                        res.session.username || savedCustCode
+                                    ).trim();
+                                    currentUser = String(
+                                        res.session.custCode || savedCustCode
+                                    ).trim();
+
+                                    // Perbarui penyimpanan agar sesi tetap bertahan
+                                    // setelah refresh berikutnya.
+                                    saveAuthState();
+                                    resolve(true);
+                                } else {
+                                    window.__serverSessionToken = '';
+                                    resolve(false);
+                                }
+                            })
+                            .withFailureHandler(function() {
+                                window.__serverSessionToken = '';
+                                resolve(false);
+                            })
+                            .restoreLoginSession(token);
+                    });
+
+                    if (restoredByToken && window.__serverSessionToken) {
+                        showMainPageAfterRestore();
+                        return true;
+                    }
+                }
+
+                // 2. Fallback utama:
+                // bila token tidak ada / sudah tidak valid, login ulang otomatis
+                // menggunakan CUST.CODE yang sudah tersimpan.
+                const restoredByCustCode = await new Promise(function(resolve) {
+                    google.script.run
+                        .withSuccessHandler(function(res) {
+                            if (res && res.success && res.token && res.custCode) {
+                                window.__serverSessionToken = String(res.token).trim();
+                                currentUsernameInput = String(
+                                    res.custCode || savedCustCode
+                                ).trim();
+                                currentUser = String(
+                                    res.custCode || savedCustCode
+                                ).trim();
+
                                 saveAuthState();
                                 resolve(true);
                             } else {
                                 window.__serverSessionToken = '';
                                 resolve(false);
                             }
-                        }).withFailureHandler(function() {
+                        })
+                        .withFailureHandler(function() {
                             window.__serverSessionToken = '';
                             resolve(false);
-                        }).restoreLoginSession(token);
-                    }).then(function(valid) {
-                        if (valid) return true;
-                    });
-                    if (window.__serverSessionToken) {
-                        document.getElementById('loginPage').classList.add('hidden');
-                        document.getElementById('registerPage').classList.add('hidden');
-                        document.getElementById('mainPage').classList.remove('hidden');
-                        document.getElementById('mainHeader').classList.remove('hidden');
-                        document.getElementById('leftNav').classList.remove('hidden');
-                        setSidebarState(true);
-                        applyRoleVisibility();
-                        document.getElementById('userBadge').textContent = 'CUST.CODE: ' + currentUser;
-                        document.getElementById('userBadge').classList.remove('hidden');
-                        const adminTools = document.getElementById('riwayatAdminTools');
-                        if (adminTools) adminTools.classList.add('hidden');
-                        loadOrderAchievement(true);
-                        loadCustomerContext(currentUser);
-                        loadRiwayat(true, true);
-                        loadInputMasterData();
-                        return true;
-                    }
-                    clearAuthState();
-                }
-
-                // Migrasi sesi lama: validasi CUST.CODE ke server dan buat server session baru.
-                await new Promise(function(resolve) {
-                    google.script.run.withSuccessHandler(function(res) {
-                        if (res && res.success && res.token) {
-                            window.__serverSessionToken = res.token;
-                            currentUsernameInput = String(state.username).trim();
-                            currentUser = String(res.custCode || state.custCode || state.sales).trim();
-                            saveAuthState();
-                            resolve(true);
-                        } else resolve(false);
-                    }).withFailureHandler(function(){ resolve(false); }).prosesLogin(String(state.custCode || state.sales).trim());
+                        })
+                        .prosesLogin(savedCustCode);
                 });
 
-                if (!window.__serverSessionToken) {
-                    clearAuthState();
+                if (!restoredByCustCode || !window.__serverSessionToken) {
                     return false;
                 }
 
-                document.getElementById('loginPage').classList.add('hidden');
-                document.getElementById('registerPage').classList.add('hidden');
-                document.getElementById('mainPage').classList.remove('hidden');
-                document.getElementById('mainHeader').classList.remove('hidden');
-                document.getElementById('leftNav').classList.remove('hidden');
-                setSidebarState(true);
-                applyRoleVisibility();
-                document.getElementById('userBadge').textContent = 'CUST.CODE: ' + currentUser;
-                document.getElementById('userBadge').classList.remove('hidden');
-                const adminTools = document.getElementById('riwayatAdminTools');
-                if (adminTools) adminTools.classList.add('hidden');
-                loadOrderAchievement(true);
-                loadCustomerContext(currentUser);
-                loadRiwayat(true, true);
-                loadInputMasterData();
+                showMainPageAfterRestore();
                 return true;
+
             } catch (e) {
-                console.warn('Gagal memulihkan sesi server:', e);
+                console.warn('Gagal memulihkan sesi berdasarkan CUST.CODE:', e);
                 return false;
             }
+        }
+
+        function showMainPageAfterRestore() {
+            currentUser = String(currentUser || '').trim();
+            currentUsernameInput = String(currentUsernameInput || currentUser).trim();
+
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('registerPage').classList.add('hidden');
+            document.getElementById('mainPage').classList.remove('hidden');
+            document.getElementById('mainHeader').classList.remove('hidden');
+            document.getElementById('leftNav').classList.remove('hidden');
+
+            setSidebarState(true);
+            applyRoleVisibility();
+
+            const badge = document.getElementById('userBadge');
+            if (badge) {
+                badge.textContent = 'CUST.CODE: ' + currentUser;
+                badge.classList.remove('hidden');
+            }
+
+            const adminTools = document.getElementById('riwayatAdminTools');
+            if (adminTools) adminTools.classList.add('hidden');
+
+            // Muat ulang data berdasarkan CUST.CODE yang dipulihkan.
+            loadOrderAchievement(true);
+            loadCustomerContext(currentUser);
+            loadRiwayat(true, true);
+            loadInputMasterData();
         }
 
         window.onload = async function() {
@@ -3273,7 +3303,7 @@ body {
                 const contractPeriod=(item.contractStart&&item.contractEnd) ? (item.contractStart+' s/d '+item.contractEnd) : 'Periode kontrak belum tersedia';
                 const categoryRows=allCats.slice(0,6).map(function(r){return `<div class="monitoring-category-row"><span class="cat-name">${escapeHtml(r.kategori||'Lainnya')}</span><span class="cat-number">${formatNumberID(r.volume,1)}</span><span class="cat-number">${formatNumberID(r.karton,1)}</span><span class="cat-rate">${formatNumberID(r.pointRate,1)}</span><strong>${formatNumberID(r.point,1)} pt</strong></div>`;}).join('');
                 html+=`<div class="monitoring-outlet-card">
-                    <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)} </div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
+                    <div class="monitoring-card-head"><div class="flex justify-between gap-2"><div><div class="monitoring-card-kicker">${escapeHtml(item.dayVisit||'Outlet')}</div><div class="monitoring-card-title">${escapeHtml(item.outlet||'-')}</div><div class="monitoring-card-sub">${escapeHtml(selectedQuarter)} • Actual DAMEN</div></div><div class="w-9 h-9 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-lg">🏪</div></div></div>
                     <div class="monitoring-card-body">
                         <div class="monitoring-kpi-grid">
                             <div class="monitoring-kpi"><div class="monitoring-kpi-label">Target Quartal</div><div class="monitoring-kpi-value">${formatNumberID(target,1)} dus</div></div>
